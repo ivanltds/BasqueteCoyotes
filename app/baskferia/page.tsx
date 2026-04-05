@@ -5,9 +5,12 @@ import InstaFeed from '@/components/InstaFeed'
 import MarqueeStrip from '@/components/MarqueeStrip'
 
 export const metadata: Metadata = {
-  title: 'Baskferia',
+  title: 'Baskferia 2026 | O Maior Evento de Streetball da Zona Oeste de São Paulo',
   description:
-    'Baskferia — 4ª edição do maior evento de streetball da zona oeste de São Paulo. Dois sábados de basquete, cultura e comunidade.',
+    'Conheça o Baskferia — a 4ª edição do torneio de basquete de rua que agita São Paulo. Desafios de 3 pontos, X1 e torneio 5x5. Inscreva sua equipe!',
+  alternates: {
+    canonical: '/baskferia',
+  },
 }
 
 export default function Baskferia() {
