@@ -61,24 +61,20 @@ Cloudinary aceita JPG, PNG, WebP, HEIC — pode subir direto do celular sem comp
 
 ---
  
-## 📸 Integração Instagram (Opcional)
+## 📸 Integração Instagram (Behold.so)
  
-O componente `InstaFeed.tsx` está preparado para exibir o feed, mas requer a configuração da API oficial do Meta para funcionar com dados reais.
+O site utiliza o **[Behold.so](https://behold.so/)** para exibir as fotos do Instagram de forma simples.
  
-1.  **Criar App no Meta** → Acesse [Facebook Developers](https://developers.facebook.com/) e crie um App do tipo "Consumidor".
-2.  **Adicionar Instagram** → Painel do App → Adicionar Produto → "Instagram Basic Display".
-3.  **Configurar Basic Display** → Siga o passo a passo do Meta para adicionar um usuário de teste do Instagram.
-4.  **Gerar Token** → Nas configurações do Basic Display, gere um **Long-Lived Access Token** (válido por 60 dias).
-5.  **Preencher o .env.local** (veja seção de variáveis acima).
- 
-### 💡 Alternativa Simples (Sem Facebook)
-Se você não tem uma conta do Facebook vinculada ou quer evitar a complexidade do Meta Developers, use o **[Behold.so](https://behold.so/)**:
-1.  Crie uma conta gratuita no Behold.
-2.  Conecte seu Instagram (é feito via login direto, sem precisar de App no Meta).
-3.  O Behold te dará uma **URL de API (JSON)**.
-4.  No código (`components/InstaFeed.tsx`), basta substituir a busca dos posts por esse link.
- 
-*Nota: O componente atual exibe um mockup elegante até que a integração da API seja concluída no código (veja comentários em `components/InstaFeed.tsx`).*
+1.  **Criar conta** → Acesse [Behold.so](https://behold.so/) e crie sua conta gratuita.
+2.  **Conectar Instagram** → Siga o passo a passo da plataforma para autorizar sua conta.
+3.  **Gerar URL de Feed** → O Behold fornecerá uma URL de JSON Feed (Ex: `https://feeds.behold.so/XYZ`).
+4.  **Configurar Variáveis**: Adicione no `.env.local`:
+    ```env
+    # ── Instagram Behold.so ────────────────────────────────────────────────────────
+    # URL do JSON Feed (Behold.so)
+    NEXT_PUBLIC_BEHOLD_URL_COYOTES=https://feeds.behold.so/ID_AQUI
+    NEXT_PUBLIC_BEHOLD_URL_BASKFERIA=https://feeds.behold.so/ID_AQUI
+    ```
  
 ---
 

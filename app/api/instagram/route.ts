@@ -5,8 +5,12 @@ export async function GET(request: Request) {
   const profile = searchParams.get('profile')
 
   const BEHOLD_URL = profile === 'coyotes'
-    ? (process.env.NEXT_PUBLIC_BEHOLD_URL_COYOTES || 'https://feeds.behold.so/2Qpygn23lgi5iDInn3uJ')
-    : (process.env.NEXT_PUBLIC_BEHOLD_URL_BASKFERIA || 'https://feeds.behold.so/2Qpygn23lgi5iDInn3uJ')
+    ? process.env.NEXT_PUBLIC_BEHOLD_URL_COYOTES
+    : process.env.NEXT_PUBLIC_BEHOLD_URL_BASKFERIA
+
+  if (!BEHOLD_URL) {
+    return NextResponse.json({ error: 'Behold URL não configurada' }, { status: 500 })
+  }
 
   try {
     const res = await fetch(BEHOLD_URL, {
