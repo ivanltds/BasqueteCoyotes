@@ -86,21 +86,26 @@ export default async function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div>
             <span className="font-mono text-b-orange uppercase tracking-[0.3em] text-xs mb-4 block">
-              // sobre o projeto
+              // nossa história
             </span>
-            <h2 className="font-display text-6xl md:text-7xl text-white uppercase mb-6 leading-none">
-              Nossa Rua,{' '}
-              <span className="text-stroke">Nossa Regra</span>
+            <h2 className="font-display text-5xl md:text-7xl text-white uppercase mb-8 leading-none">
+              Coyotes: Respeito e Basquete <span className="text-stroke">desde 2009</span>
             </h2>
-            <p className="font-body text-gray-400 text-lg leading-relaxed mb-6 border-l-2 border-b-stone pl-6">
-              O Coyotes do Basquetebol é mais do que um time — é um movimento. Nascido na zona oeste
-              de São Paulo, focamos em trazer a cultura do streetball e o impacto positivo do esporte
-              para a nossa comunidade.
-            </p>
-            <p className="font-body text-gray-400 text-lg leading-relaxed pl-6 border-l-2 border-b-stone">
-              Jogamos com garra, lealdade e respeito. A quadra é o nosso palco, o bairro é a nossa
-              casa, e a matilha é a nossa família.
-            </p>
+            
+            <div className="space-y-6 border-l-2 border-b-stone pl-6">
+              <p className="font-body text-gray-400 text-lg leading-relaxed">
+                Nascido em 2009, o projeto Coyotes reúne moradores do bairro sem qualquer restrição de idade ou gênero. Aqui, ensinamos o basquete do zero, imergindo cada participante em um ambiente onde os princípios do jogo — lealdade, disciplina e garra — são refletidos diretamente em suas vidas.
+              </p>
+              <p className="font-body text-gray-400 text-lg leading-relaxed">
+                Para se juntar à matilha, não tem burocracia: é só aparecer no sábado e se apresentar. Todos são bem-vindos para aprender, evoluir e fazer parte da nossa família.
+              </p>
+              <div className="bg-b-gray/50 p-6 border border-b-stone/30">
+                <h4 className="font-display text-b-orange text-xl uppercase mb-3 text-shadow-sm">As Regras da Quadra</h4>
+                <p className="font-body text-gray-400 text-sm leading-relaxed italic">
+                  "Sem preconceito, sem qualquer tipo de violência e com o máximo respeito. Valorizamos a sinergia entre quem está iniciando e quem já tem estrada no projeto. Evoluímos as pessoas através da nossa paixão pelo basquete."
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Stats */}
@@ -121,6 +126,40 @@ export default async function Home() {
                 <div className="font-body text-gray-400 text-sm uppercase tracking-wider">{label}</div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── TREINADOR ── */}
+      <section className="py-24 bg-b-dark/50 border-y border-b-stone/20 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6 md:px-20">
+          <div className="flex flex-col md:flex-row items-center gap-12 md:gap-20">
+            {/* Foto Coach */}
+            <div className="relative w-full md:w-1/3 aspect-[4/5] group overflow-hidden border-4 border-b-stone/30">
+              <Image
+                src={`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dqt35bpzt'}/image/upload/v1/coyotes/hero/foto-treinador.jpg`}
+                alt="Thiago Fidelis - Coordenador Coyotes"
+                fill
+                className="object-cover grayscale group-hover:grayscale-0 transition-all duration-700 scale-100 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-b-dark via-transparent to-transparent opacity-60" />
+            </div>
+
+            {/* Crédito Coach */}
+            <div className="md:w-2/3">
+              <span className="font-mono text-b-neon uppercase tracking-[0.3em] text-xs mb-4 block">
+                // a liderança
+              </span>
+              <h2 className="font-display text-5xl md:text-6xl text-white uppercase mb-6 leading-tight">
+                Thiago Fidelis
+              </h2>
+              <div className="inline-block bg-b-orange text-b-dark font-display text-sm uppercase px-4 py-1 mb-8">
+                Idealizador e Coordenador do Projeto
+              </div>
+              <p className="font-body text-gray-400 text-xl leading-relaxed italic border-l-4 border-b-orange pl-8 py-2">
+                "O basquete é o nosso meio, mas a formação de pessoas com caráter e respeito é o nosso maior legado."
+              </p>
+            </div>
           </div>
         </div>
       </section>

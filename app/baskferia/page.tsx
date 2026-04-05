@@ -73,6 +73,26 @@ export default function Baskferia() {
         </div>
       </section>
 
+      {/* ── HISTÓRICO EDICÕES ── */}
+      <section className="relative z-20 -mt-12 mb-12 max-w-5xl mx-auto px-6">
+        <div className="bg-b-gray border-2 border-b-stone/30 p-8 shadow-2xl">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {[
+              { ed: '1ª', year: '2022', highlight: false },
+              { ed: '2ª', year: '2023', highlight: false },
+              { ed: '3ª', year: '2024', highlight: false },
+              { ed: '4ª', year: '2026', highlight: true },
+            ].map((item) => (
+              <div key={item.ed} className={`text-center p-4 border ${item.highlight ? 'border-b-neon bg-b-neon/5' : 'border-b-stone/20'}`}>
+                <div className={`font-display text-4xl mb-1 ${item.highlight ? 'text-b-neon' : 'text-gray-500'}`}>{item.ed}</div>
+                <div className="font-mono text-xs uppercase tracking-widest text-gray-400">Edição · {item.year}</div>
+                {item.highlight && <div className="mt-2 inline-block bg-b-neon text-b-dark text-[10px] font-bold px-2 py-0.5 uppercase tracking-tighter">Em breve</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── MARQUEE ── */}
       <MarqueeStrip variant="neon" />
 
@@ -112,8 +132,8 @@ export default function Baskferia() {
                 <span className="font-mono text-b-neon text-xs uppercase tracking-widest">01</span>
                 <h3 className="font-display text-4xl text-b-neon uppercase">1º Sábado</h3>
               </div>
-              <p className="font-body font-bold text-gray-400 mb-8 uppercase tracking-widest text-sm">
-                18 de Julho
+              <p className="font-body text-gray-300 text-lg mb-8 leading-relaxed">
+                Um dia focado na democracia e celebração. Abrimos as portas para **toda a comunidade** participar, independente do nível técnico. É a chance de todos mostrarem seu talento nos desafios individuais.
               </p>
               <ul className="space-y-4">
                 {[
@@ -140,7 +160,7 @@ export default function Baskferia() {
                 25 de Julho
               </p>
               <p className="font-body text-gray-300 text-lg mb-8 leading-relaxed">
-                O grande dia. Torneio principal com disputas eletrizantes durante todo o dia.
+                O dia da elite. 8 equipes selecionadas dando seu melhor em quadra. Foco total em **competitividade e alto nível**, onde apenas um sairá com o troféu de campeão.
               </p>
               <ul className="space-y-4">
                 {[
