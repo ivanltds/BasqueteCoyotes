@@ -38,6 +38,9 @@ export const metadata: Metadata = {
   icons: {
     icon: '/images/logos/logo-coyotes.png',
     apple: '/images/logos/logo-coyotes.png',
+  },
+  verification: {
+    google: 'yf2lvvRi68ocJ8s8lSU4f1jxjrFPePcNt7IzQYYR0mA',
   }
 }
 
