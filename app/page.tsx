@@ -233,7 +233,7 @@ export default async function Home() {
           <div className="flex items-center gap-4 mb-12">
             <span className="font-mono text-xs text-gray-600 uppercase tracking-widest">// instagram</span>
             <h2 className="font-display text-4xl text-white uppercase">
-              @coyotesdobasquetebol
+              @basquetecoyotes
             </h2>
           </div>
           <InstaFeed profile="coyotes" />
@@ -248,7 +248,7 @@ export default async function Home() {
               // galeria
             </span>
             <h2 className="font-display text-6xl md:text-7xl text-white uppercase leading-none">
-              Em Campo
+              Em QUADRA
             </h2>
           </div>
           <div className="hidden md:block font-display text-b-stone text-xl uppercase tracking-widest">

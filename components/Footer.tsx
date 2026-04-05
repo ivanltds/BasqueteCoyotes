@@ -51,7 +51,7 @@ export default function Footer() {
             <h4 className="font-display text-xl text-white uppercase mb-4">Redes</h4>
             <div className="flex flex-col gap-2">
               {[
-                { label: '@coyotesdobasquetebol', href: 'https://instagram.com/coyotesdobasquetebol' },
+                { label: '@basquetecoyotes', href: 'https://instagram.com/basquetecoyotes' },
                 { label: '@baskferia',             href: 'https://instagram.com/baskferia' },
               ].map(({ label, href }) => (
                 <a
@@ -72,7 +72,7 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="border-t border-b-stone pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="font-mono text-gray-700 text-xs uppercase tracking-widest">
-            © {year} Coyotes do Basquetebol. Todos os direitos reservados.
+            © {year} @basquetecoyotes. Todos os direitos reservados.
           </p>
           <p className="font-mono text-gray-700 text-xs">
             Zona Oeste · São Paulo · SP

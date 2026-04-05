@@ -18,7 +18,7 @@ export default function InstaFeed({ profile }: InstaFeedProps) {
   const [posts, setPosts] = useState<BeholdPost[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
-  const [profileName, setProfileName] = useState(profile === 'coyotes' ? 'coyotesdobasquetebol' : 'baskferia')
+  const [profileName, setProfileName] = useState(profile === 'coyotes' ? 'basquetecoyotes' : 'baskferia')
 
   const API_URL = `/api/instagram?profile=${profile}`
   const profileUrl = `https://instagram.com/${profileName}`
