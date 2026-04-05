@@ -137,7 +137,7 @@ export default async function Home() {
             {/* Foto Coach */}
             <div className="relative w-full md:w-1/3 aspect-[4/5] group overflow-hidden border-4 border-b-stone/30">
               <Image
-                src={`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dqt35bpzt'}/image/upload/v1/${process.env.CLOUDINARY_HERO_FOLDER ?? 'coyotes/hero'}/foto-treinador.jpg`}
+                src={`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dqt35bpzt'}/image/upload/v1/foto-treinador.jpg`}
                 alt="Thiago Fidelis - Coordenador Coyotes"
                 fill
                 className="object-cover grayscale group-hover:grayscale-0 transition-all duration-700 scale-100 group-hover:scale-105"
