@@ -75,7 +75,22 @@ O site utiliza o **[Behold.so](https://behold.so/)** para exibir as fotos do Ins
     NEXT_PUBLIC_BEHOLD_URL_COYOTES=https://feeds.behold.so/ID_AQUI
     NEXT_PUBLIC_BEHOLD_URL_BASKFERIA=https://feeds.behold.so/ID_AQUI
     ```
- 
+
+---
+
+## 🌩️ Configuração do Cloudinary
+
+O site busca imagens dinamicamente das pastas que você configurar no `.env.local`. Certifique-se de que as pastas no Cloudinary contenham imagens com os nomes corretos para que apareçam no site:
+
+### 📸 Imagens Obrigatórias (Pasta `hero`)
+*   **Foto do Time**: O site pega a imagem mais recente da pasta para o topo da Home.
+*   **Foto do Treinador**: Deve ser nomeada exatamente como **`foto-treinador.jpg`** dentro da pasta configurada em `CLOUDINARY_HERO_FOLDER`.
+
+### 📂 Estrutura de Pastas Sugerida
+1.  `coyotes/hero` — Fotos de destaque e a foto do treinador.
+2.  `coyotes/gallery` — Todas as fotos da galeria (o site sorteia as imagens daqui).
+3.  `coyotes/logos` — Logos do projeto e do Baskferia.
+
 ---
 
 ## 📁 Estrutura

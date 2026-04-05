@@ -74,7 +74,7 @@ export default function Baskferia() {
       </section>
 
       {/* ── HISTÓRICO EDICÕES ── */}
-      <section className="relative z-20 -mt-12 mb-12 max-w-5xl mx-auto px-6">
+      <section className="relative z-20 py-12 mb-12 max-w-5xl mx-auto px-6">
         <div className="bg-b-gray border-2 border-b-stone/30 p-8 shadow-2xl">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {[
