@@ -63,10 +63,11 @@ export async function getCloudinaryImages(
     const credentials = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')
 
     const body = JSON.stringify({
-      expression: `folder:${folder}`,  // busca só dentro da pasta configurada
+      // Busca na pasta, mas EXCLUI o arquivo do treinador para não cair no background do Hero/Galeria
+      expression: `folder:${folder} AND NOT public_id:*foto-treinador*`, 
       max_results: maxResults,
-      sort_by: [{ public_id: 'asc' }], // ordena pelo nome do arquivo
-      with_field: [], // display_name não é suportado aqui pelo Search API
+      sort_by: [{ public_id: 'asc' }],
+      with_field: [],
     })
 
     const res = await fetch(url, {
