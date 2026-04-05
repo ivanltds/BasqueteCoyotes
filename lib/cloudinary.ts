@@ -63,9 +63,8 @@ export async function getCloudinaryImages(
     const credentials = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')
 
     const body = JSON.stringify({
-      // Busca na pasta, mas EXCLUI o arquivo do treinador para não cair no background do Hero/Galeria
-      expression: `folder:${folder} AND NOT public_id:*foto-treinador*`, 
-      max_results: maxResults,
+      expression: `folder:${folder}`,
+      max_results: maxResults + 2, // Buscamos um pouco mais para garantir caso tenhamos filtros
       sort_by: [{ public_id: 'asc' }],
       with_field: [],
     })
@@ -77,8 +76,6 @@ export async function getCloudinaryImages(
         'Content-Type': 'application/json',
       },
       body,
-      // Revalida a cada 60 segundos em produção — zero custo de API
-      // Para atualização instantânea, mude para: { cache: 'no-store' }
       next: { revalidate: 60 },
     })
 
@@ -89,7 +86,13 @@ export async function getCloudinaryImages(
     }
 
     const data: CloudinarySearchResponse = await res.json()
-    const resources = data.resources ?? []
+    let resources = data.resources ?? []
+
+    // FILTRO: Removemos o arquivo do treinador para não cair no background/galeria aleatória
+    resources = resources.filter(img => !img.public_id.includes('foto-treinador'))
+
+    // LIMITAMOS ao máximo solicitado
+    resources = resources.slice(0, maxResults)
 
     // Embaralha os resultados (Fisher-Yates) para evitar fotos sequenciais semelhantes
     for (let i = resources.length - 1; i > 0; i--) {
