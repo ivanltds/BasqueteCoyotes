@@ -109,23 +109,34 @@ export default async function Home() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              { num: '100+', label: 'Atletas na matilha' },
-              { num: '4ª',   label: 'Edição do Baskferia' },
-              { num: '10+',  label: 'Anos de história' },
-              { num: '0',    label: 'Preconceito tolerado' },
-            ].map(({ num, label }) => (
-              <div
-                key={label}
-                className="bg-b-gray border border-b-stone p-6 hover:border-b-orange transition-colors duration-300 group"
-              >
-                <div className="font-display text-5xl text-b-orange group-hover:text-b-neon transition-colors duration-300 mb-2">
-                  {num}
+          <div className="space-y-8">
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { num: '100+', label: 'Atletas na matilha' },
+                { num: '4ª',   label: 'Edição do Baskferia' },
+                { num: '10+',  label: 'Anos de história' },
+                { num: '0',    label: 'Preconceito tolerado' },
+              ].map(({ num, label }) => (
+                <div
+                  key={label}
+                  className="bg-b-gray border border-b-stone p-6 hover:border-b-orange transition-colors duration-300 group"
+                >
+                  <div className="font-display text-5xl text-b-orange group-hover:text-b-neon transition-colors duration-300 mb-2">
+                    {num}
+                  </div>
+                  <div className="font-body text-gray-400 text-sm uppercase tracking-wider">{label}</div>
                 </div>
-                <div className="font-body text-gray-400 text-sm uppercase tracking-wider">{label}</div>
-              </div>
-            ))}
+              ))}
+            </div>
+            
+            <div className="pt-4">
+              <Link
+                href="/apoiar"
+                className="inline-block w-full text-center font-display text-2xl uppercase bg-b-orange text-b-dark px-8 py-5 tracking-widest shadow-brutal hover:shadow-none hover:translate-x-2 hover:translate-y-2 transition-all"
+              >
+                Quero Apoiar a Matilha →
+              </Link>
+            </div>
           </div>
         </div>
       </section>
@@ -135,7 +146,7 @@ export default async function Home() {
         <div className="max-w-7xl mx-auto px-6 md:px-20">
           <div className="flex flex-col md:flex-row items-center gap-12 md:gap-20">
             {/* Foto Coach */}
-            <div className="relative w-full md:w-1/3 aspect-[4/5] group overflow-hidden border-4 border-b-stone/30">
+            <div className="relative w-full md:w-1/3 aspect-[4/5] group overflow-hidden border-4 border-b-stone/30 shadow-brutal">
               <Image
                 src={`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dqt35bpzt'}/image/upload/v1/foto-treinador.jpg`}
                 alt="Thiago Fidelis - Coordenador Coyotes"
@@ -160,6 +171,68 @@ export default async function Home() {
                 "O basquete é o nosso meio, mas a formação de pessoas com caráter e respeito é o nosso maior legado."
               </p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── MARKETING & DIGITAL ── */}
+      <section className="py-24 bg-b-dark overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6 md:px-20">
+          <div className="text-center mb-16">
+            <span className="font-mono text-b-orange uppercase tracking-[0.3em] text-xs mb-4 block">
+              // os bastidores
+            </span>
+            <h2 className="font-display text-5xl md:text-6xl text-white uppercase leading-none">
+              Marketing & <span className="text-stroke-neon">Digital</span>
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 max-w-5xl mx-auto">
+            
+            {/* NANI (Geovane Nunes) */}
+            <div className="group bg-b-gray border-2 border-b-stone hover:border-b-orange transition-all duration-300 overflow-hidden shadow-brutal-org">
+              <div className="relative aspect-square md:aspect-[4/3] overflow-hidden">
+                <Image
+                  src={`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dqt35bpzt'}/image/upload/v1/coyotes/hero/nani.jpg`}
+                  alt="Geovane Nunes (Nani) - Marketing e Operações"
+                  fill
+                  className="object-cover grayscale group-hover:grayscale-0 transition-all duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-b-dark/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              </div>
+              <div className="p-8">
+                <h3 className="font-display text-4xl text-white uppercase mb-2">Geovane Nunes (Nani)</h3>
+                <div className="font-mono text-b-orange text-xs uppercase tracking-widest font-bold mb-4">
+                  Marketing & Operações
+                </div>
+                <p className="font-body text-gray-400 text-sm leading-relaxed">
+                  Responsável por manter a engrenagem girando, cuidando da imagem do projeto e de toda a operação por trás dos eventos.
+                </p>
+              </div>
+            </div>
+
+            {/* IVAN SOUZA */}
+            <div className="group bg-b-gray border-2 border-b-stone hover:border-b-neon transition-all duration-300 overflow-hidden shadow-brutal-org">
+              <div className="relative aspect-square md:aspect-[4/3] overflow-hidden">
+                <Image
+                  src={`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dqt35bpzt'}/image/upload/v1/coyotes/hero/ivan.jpg`}
+                  alt="Ivan Souza - Redes Sociais e Interações Digitais"
+                  fill
+                  className="object-cover grayscale group-hover:grayscale-0 transition-all duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-b-dark/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              </div>
+              <div className="p-8">
+                <h3 className="font-display text-4xl text-white uppercase mb-2">Ivan Souza</h3>
+                <div className="font-mono text-b-neon text-xs uppercase tracking-widest font-bold mb-4">
+                  Redes Sociais & Interações
+                </div>
+                <p className="font-body text-gray-400 text-sm leading-relaxed">
+                  A voz digital dos Coyotes. Cuida das nossas redes e garante que a matilha esteja sempre conectada e engajada.
+                </p>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
