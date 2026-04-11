@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -24,6 +24,37 @@ export default function PreInscricaoPage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [stats, setStats] = useState({
+    total: 0,
+    byModality: {} as Record<string, number>
+  })
+
+  // Buscar estatísticas em tempo real
+  const fetchStats = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('pre_inscricoes')
+        .select('modalidade')
+
+      if (error) throw error
+
+      const counts = data.reduce((acc: Record<string, number>, curr) => {
+        acc[curr.modalidade] = (acc[curr.modalidade] || 0) + 1
+        return acc
+      }, {})
+
+      setStats({
+        total: data.length,
+        byModality: counts
+      })
+    } catch (err) {
+      console.error('Erro ao buscar stats:', err)
+    }
+  }
+
+  useEffect(() => {
+    fetchStats()
+  }, [])
 
   const selectModality = (id: string) => {
     setFormData((prev) => ({
@@ -38,27 +69,47 @@ export default function PreInscricaoPage() {
     e.preventDefault()
     setIsSubmitting(true)
     
+    const normalizedEmail = formData.email.trim().toLowerCase()
+    const normalizedWhatsapp = formData.whatsapp.replace(/\D/g, '')
+
     try {
+      const { data: existing, error: checkError } = await supabase
+        .from('pre_inscricoes')
+        .select('id')
+        .or(`email.eq.${normalizedEmail},whatsapp.eq.${normalizedWhatsapp}`)
+        .maybeSingle()
+
+      if (checkError) {
+        console.error('Erro no check de duplicidade:', checkError)
+      }
+
+      if (existing) {
+        alert('Ei! Já encontramos uma inscrição com este E-mail ou WhatsApp. Cada pessoa pode se inscrever apenas uma vez.')
+        setIsSubmitting(false)
+        return
+      }
+
       const { error } = await supabase
         .from('pre_inscricoes')
         .insert([
           {
-            nome: formData.name,
-            whatsapp: formData.whatsapp,
-            email: formData.email,
+            nome: formData.name.trim(),
+            whatsapp: normalizedWhatsapp,
+            email: normalizedEmail,
             genero: formData.gender,
             faixa_etaria: formData.ageGroup,
             modalidade: formData.modality,
-            time_oficial: formData.teamName || null,
+            time_oficial: formData.teamName?.trim() || null,
           }
         ])
 
       if (error) throw error
 
       setSubmitted(true)
+      fetchStats() // Atualiza os números após o envio
     } catch (error) {
       console.error('Erro ao salvar no Supabase:', error)
-      alert('Ops! Tivemos um problema ao salvar sua inscrição. Tente novamente em alguns instantes ou nos chame no Instagram.')
+      alert('Ops! Tivemos um problema ao salvar sua inscrição. Verifique se você já se inscreveu ou tente novamente mais tarde.')
     } finally {
       setIsSubmitting(false)
     }
@@ -89,7 +140,7 @@ export default function PreInscricaoPage() {
 
   return (
     <main className="min-h-screen bg-b-dark text-white pt-32 pb-20 px-6">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         {/* Cabeçalho do Formulário */}
         <header className="mb-12 border-b-4 border-b-neon pb-8">
           <span className="font-mono text-b-neon uppercase tracking-[0.3em] text-xs mb-4 block">
@@ -98,13 +149,27 @@ export default function PreInscricaoPage() {
           <h1 className="font-display text-6xl md:text-7xl uppercase leading-none mb-4">
             Cola no <span className="text-b-neon">Baskferia</span>
           </h1>
-          <p className="font-body text-gray-400 text-lg leading-relaxed">
+          <p className="font-body text-gray-400 text-lg leading-relaxed max-w-2xl">
             O evento é pra todo mundo que vive o basquete. Se você quer mostrar seu talento em quadra, a pré-inscrição para os desafios do **1º Sábado** começa aqui. 
-            Garante seu lugar na grade pra gente organizar as chaves e fazer essa edição ser histórica.
           </p>
         </header>
 
-        <form onSubmit={handleSubmit} className="space-y-12">
+        {/* Dashboard de Inscritos */}
+        <section className="mb-16 grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="bg-b-neon p-6 border-2 border-b-neon shadow-brutal-org flex flex-col items-center justify-center">
+            <span className="font-display text-5xl text-b-dark leading-none">{stats.total}</span>
+            <span className="font-mono text-[10px] uppercase font-bold text-b-dark/60 tracking-tighter">Total Inscritos</span>
+          </div>
+          {MODALITIES.map((mod) => (
+            <div key={mod.id} className="bg-b-gray p-4 border-2 border-b-stone flex flex-col items-center justify-center text-center">
+              <span className="text-xl mb-1">{mod.icon}</span>
+              <span className="font-display text-2xl text-white leading-none">{stats.byModality[mod.id] || 0}</span>
+              <span className="font-mono text-[9px] uppercase text-gray-500 tracking-tighter leading-tight mt-1">{mod.label}</span>
+            </div>
+          ))}
+        </section>
+
+        <form onSubmit={handleSubmit} className="space-y-12 max-w-3xl">
           {/* Dados Pessoais */}
           <section className="space-y-6">
             <h2 className="font-display text-3xl uppercase text-b-orange tracking-widest">01. Seus Dados</h2>
