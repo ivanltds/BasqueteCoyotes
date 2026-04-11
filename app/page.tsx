@@ -193,7 +193,7 @@ export default async function Home() {
             <div className="group bg-b-gray border-2 border-b-stone hover:border-b-orange transition-all duration-300 overflow-hidden shadow-brutal-org">
               <div className="relative aspect-square md:aspect-[4/3] overflow-hidden">
                 <Image
-                  src={`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dqt35bpzt'}/image/upload/v1/coyotes/hero/nani.jpg`}
+                  src="https://res.cloudinary.com/dqt35bpzt/image/upload/v1775908084/nani_ha122j.jpg"
                   alt="Geovane Nunes (Nani) - Marketing e Operações"
                   fill
                   className="object-cover grayscale group-hover:grayscale-0 transition-all duration-500 group-hover:scale-105"
@@ -215,7 +215,7 @@ export default async function Home() {
             <div className="group bg-b-gray border-2 border-b-stone hover:border-b-neon transition-all duration-300 overflow-hidden shadow-brutal-org">
               <div className="relative aspect-square md:aspect-[4/3] overflow-hidden">
                 <Image
-                  src={`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dqt35bpzt'}/image/upload/v1/coyotes/hero/ivan.jpg`}
+                  src="https://res.cloudinary.com/dqt35bpzt/image/upload/v1775908084/ivan_ocqtgu.jpg"
                   alt="Ivan Souza - Redes Sociais e Interações Digitais"
                   fill
                   className="object-cover grayscale group-hover:grayscale-0 transition-all duration-500 group-hover:scale-105"
