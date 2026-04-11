@@ -60,18 +60,18 @@ export default function Baskferia() {
           </blockquote>
 
           <div className="animate-in animate-in-delay-4 flex flex-col sm:flex-row gap-4">
+            <Link
+              href="/baskferia/pre-inscricao"
+              className="font-display text-xl uppercase bg-b-neon text-b-dark px-8 py-4 tracking-wider shadow-brutal-org hover:shadow-none hover:translate-x-[6px] hover:translate-y-[6px] transition-all duration-150"
+            >
+              Quero Jogar
+            </Link>
             <a
               href="#formato"
-              className="font-display text-xl uppercase bg-b-neon text-b-dark px-8 py-4 tracking-wider shadow-brutal-org hover:shadow-none hover:translate-x-[6px] hover:translate-y-[6px] transition-all duration-150"
+              className="font-display text-xl uppercase border-2 border-b-neon text-b-neon px-8 py-4 tracking-wider hover:bg-b-neon/10 transition-all duration-200"
             >
               Ver o Formato
             </a>
-            <Link
-              href="/"
-              className="font-display text-xl uppercase border-2 border-white/30 text-white/60 px-8 py-4 tracking-wider hover:border-white hover:text-white transition-all duration-200"
-            >
-              ← Voltar ao Time
-            </Link>
           </div>
         </div>
       </section>

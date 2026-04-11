@@ -4,7 +4,7 @@ import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://coyotesdobasquetebol.com.br'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://basquete-coyotes.vercel.app'),
   title: {
     default: 'Coyotes do Basquetebol | Streetball e Comunidade na Zona Oeste SP',
     template: '%s | Coyotes do Basquetebol',

@@ -1,0 +1,31 @@
+id: EPIC-001-BASKFERIA-PROSPECTING
+title: Formulário de Prospecção Baskferia 2026
+status: in-progress
+description: Implementação de um formulário para coletar dados de interesse dos participantes antes da abertura das inscrições oficiais.
+owner: Morgan (PM)
+wave: 1
+stories:
+  - id: STORY-001-PROSPECTING-ROUTE
+    title: Criar rota e layout básico da página de prospecção
+    status: completed
+    priority: high
+
+  - id: STORY-002-PROSPECTING-FORM-UI
+    title: Desenvolver UI do formulário (Brutalist style) com lógica de multiseleção
+    status: completed
+    priority: high
+
+  - id: STORY-003-PROSPECTING-RESTRICTION-LOGIC
+    title: Implementar lógica de restrição para X1 e Habilidades (Representante de Time)
+    status: completed
+    priority: medium
+
+  - id: STORY-004-SUPABASE-INTEGRATION
+    title: Integrar o envio do formulário com o Supabase
+    status: todo
+    priority: high
+
+  - id: STORY-005-VALIDATION-AND-FEEDBACK
+    title: Implementar validação de campos e tela de sucesso/confirmação
+    status: completed
+    priority: low
