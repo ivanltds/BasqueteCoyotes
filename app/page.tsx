@@ -8,8 +8,29 @@ import { getCloudinaryImages } from '@/lib/cloudinary'
 const HERO_FOLDER = process.env.CLOUDINARY_HERO_FOLDER ?? 'coyotes/hero'
 
 export default async function Home() {
-  const heroImages = await getCloudinaryImages(HERO_FOLDER, 1)
-  const heroSrc = heroImages.length > 0 ? heroImages[0].secure_url : '/images/hero/foto-time-completo.jpg'
+  // Buscamos todas as imagens da pasta hero sem filtro e sem shuffle para mapear cada uma
+  const allHeroImages = await getCloudinaryImages(HERO_FOLDER, 10, { shuffle: false, skipFilter: true })
+  
+  // Busca explícita pela foto do time completo (Hero)
+  const timeCompletoImg = allHeroImages.find(img => 
+    (img.display_name && img.display_name.includes('foto-time-completo')) || 
+    img.public_id.includes('foto-time-completo')
+  )
+  const heroSrc = timeCompletoImg ? timeCompletoImg.secure_url : '/images/hero/foto-time-completo.jpg'
+
+  // Busca explícita pela foto do treinador
+  const coachImg = allHeroImages.find(img => 
+    (img.display_name && img.display_name.includes('foto-treinador')) || 
+    img.public_id.includes('foto-treinador')
+  )
+  const coachSrc = coachImg ? coachImg.secure_url : `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dqt35bpzt'}/image/upload/v1/foto-treinador.jpg`
+
+  // Busca explícita equipe Marketing
+  const naniImg = allHeroImages.find(img => (img.display_name && img.display_name.includes('nani')) || img.public_id.includes('nani'))
+  const ivanImg = allHeroImages.find(img => (img.display_name && img.display_name.includes('ivan')) || img.public_id.includes('ivan'))
+  
+  const naniSrc = naniImg ? naniImg.secure_url : "https://res.cloudinary.com/dqt35bpzt/image/upload/v1775908084/nani_ha122j.jpg"
+  const ivanSrc = ivanImg ? ivanImg.secure_url : "https://res.cloudinary.com/dqt35bpzt/image/upload/v1775908084/ivan_ocqtgu.jpg"
 
   return (
     <main className="min-h-screen bg-b-dark text-white overflow-x-hidden">
@@ -148,7 +169,7 @@ export default async function Home() {
             {/* Foto Coach */}
             <div className="relative w-full md:w-1/3 aspect-[4/5] group overflow-hidden border-4 border-b-stone/30 shadow-brutal">
               <Image
-                src={`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dqt35bpzt'}/image/upload/v1/foto-treinador.jpg`}
+                src={coachSrc}
                 alt="Thiago Fidelis - Coordenador Coyotes"
                 fill
                 className="object-cover grayscale group-hover:grayscale-0 transition-all duration-700 scale-100 group-hover:scale-105"
@@ -189,19 +210,19 @@ export default async function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 max-w-5xl mx-auto">
             
-            {/* NANI (Geovane Nunes) */}
+            {/* Geovane Nunes */}
             <div className="group bg-b-gray border-2 border-b-stone hover:border-b-orange transition-all duration-300 overflow-hidden shadow-brutal-org">
               <div className="relative aspect-square md:aspect-[4/3] overflow-hidden">
                 <Image
-                  src="https://res.cloudinary.com/dqt35bpzt/image/upload/v1775908084/nani_ha122j.jpg"
-                  alt="Geovane Nunes (Nani) - Marketing e Operações"
+                  src={naniSrc}
+                  alt="Geovane Nunes - Marketing e Operações"
                   fill
                   className="object-cover grayscale group-hover:grayscale-0 transition-all duration-500 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-b-dark/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </div>
               <div className="p-8">
-                <h3 className="font-display text-4xl text-white uppercase mb-2">Geovane Nunes (Nani)</h3>
+                <h3 className="font-display text-4xl text-white uppercase mb-2">Geovane Nunes</h3>
                 <div className="font-mono text-b-orange text-xs uppercase tracking-widest font-bold mb-4">
                   Marketing & Operações
                 </div>
@@ -215,7 +236,7 @@ export default async function Home() {
             <div className="group bg-b-gray border-2 border-b-stone hover:border-b-neon transition-all duration-300 overflow-hidden shadow-brutal-org">
               <div className="relative aspect-square md:aspect-[4/3] overflow-hidden">
                 <Image
-                  src="https://res.cloudinary.com/dqt35bpzt/image/upload/v1775908084/ivan_ocqtgu.jpg"
+                  src={ivanSrc}
                   alt="Ivan Souza - Redes Sociais e Interações Digitais"
                   fill
                   className="object-cover grayscale group-hover:grayscale-0 transition-all duration-500 group-hover:scale-105"

@@ -36,37 +36,32 @@ interface CloudinarySearchResponse {
 
 /**
  * Busca todas as imagens de uma pasta no Cloudinary.
- * Retorna no máximo `maxResults` imagens (padrão: 50).
  */
 export async function getCloudinaryImages(
   folder: string,
-  maxResults = 50
+  maxResults = 50,
+  options: { shuffle?: boolean; skipFilter?: boolean } = {}
 ): Promise<CloudinaryImage[]> {
-  const cloudName  = process.env.CLOUDINARY_CLOUD_NAME
+  const { shuffle = true, skipFilter = false } = options
+  const cloudName  = process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
   const apiKey     = process.env.CLOUDINARY_API_KEY
   const apiSecret  = process.env.CLOUDINARY_API_SECRET
 
-  // Se as variáveis não estiverem configuradas, retorna vazio (não quebra o build)
   if (!cloudName || !apiKey || !apiSecret) {
     console.warn(
-      '[Cloudinary] Variáveis de ambiente não configuradas. ' +
-      'Adicione CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY e CLOUDINARY_API_SECRET no .env.local'
+      '[Cloudinary] Variáveis de ambiente não configuradas.'
     )
     return []
   }
 
   try {
-    // Cloudinary Admin API — Search endpoint
     const url = `https://api.cloudinary.com/v1_1/${cloudName}/resources/search`
-
-    // Autenticação Basic (API Key:API Secret em base64)
     const credentials = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')
 
     const body = JSON.stringify({
-      expression: `folder:${folder}`,
-      max_results: maxResults + 2, // Buscamos um pouco mais para garantir caso tenhamos filtros
+      expression: `folder:"${folder}"`,
+      max_results: maxResults + 5,
       sort_by: [{ public_id: 'asc' }],
-      with_field: [],
     })
 
     const res = await fetch(url, {
@@ -88,20 +83,26 @@ export async function getCloudinaryImages(
     const data: CloudinarySearchResponse = await res.json()
     let resources = data.resources ?? []
 
-    // FILTRO: Removemos o arquivo do treinador para não cair no background/galeria aleatória
-    resources = resources.filter(img => !img.public_id.includes('foto-treinador'))
+    // FILTRO: Removemos o arquivo do treinador se não pularmos o filtro.
+    // Checamos public_id e display_name.
+    if (!skipFilter) {
+      resources = resources.filter(img => {
+        const isTreinador = img.public_id.includes('foto-treinador') || 
+                            (img.display_name && img.display_name.includes('foto-treinador'))
+        return !isTreinador
+      })
+    }
 
-    // LIMITAMOS ao máximo solicitado
     resources = resources.slice(0, maxResults)
 
-    // Embaralha os resultados (Fisher-Yates) para evitar fotos sequenciais semelhantes
-    for (let i = resources.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [resources[i], resources[j]] = [resources[j], resources[i]]
+    if (shuffle) {
+      for (let i = resources.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [resources[i], resources[j]] = [resources[j], resources[i]]
+      }
     }
 
     return resources
-
   } catch (error) {
     console.error('[Cloudinary] Falha ao buscar imagens:', error)
     return []
