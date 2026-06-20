@@ -7,15 +7,68 @@ import MarqueeStrip from '@/components/MarqueeStrip'
 export const metadata: Metadata = {
   title: 'Baskferia 2026 | O Maior Evento de Streetball da Zona Oeste de São Paulo',
   description:
-    'Conheça o Baskferia — a 4ª edição do torneio de basquete de rua que agita São Paulo. Desafios de 3 pontos, X1 e torneio 5x5. Inscreva sua equipe!',
+    'Baskferia 2026 — 4ª edição do torneio de basquete de rua organizado pelos Coyotes do Basquetebol na Zona Oeste de São Paulo. Desafios de 3 pontos, X1 e torneio 5x5. Inscreva sua equipe!',
+  keywords: [
+    'baskferia',
+    'baskferia 2026',
+    'torneio de basquete sp',
+    'basquete de rua são paulo',
+    'streetball zona oeste sp',
+    'evento de basquete sp',
+    'coyotes basquetebol',
+    'torneio 5x5 sp',
+    'desafio de habilidades basquete',
+    'arremesso 3 pontos sp',
+  ],
   alternates: {
     canonical: '/baskferia',
   },
+  openGraph: {
+    title: 'Baskferia 2026 | Streetball na Zona Oeste de SP',
+    description: 'Baskferia 2026 — 4ª edição do maior evento de basquete de rua da Zona Oeste de São Paulo. Pelos Coyotes do Basquetebol.',
+    type: 'website',
+    locale: 'pt_BR',
+    siteName: 'Coyotes do Basquetebol',
+    images: [{ url: '/images/logos/logo-baskferia.png', width: 500, height: 500, alt: 'Baskferia 2026' }],
+  },
+}
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SportsEvent',
+  name: 'Baskferia 2026',
+  description: '4ª edição do torneio de basquete de rua organizado pelos Coyotes do Basquetebol na Zona Oeste de São Paulo. Desafios de 3 pontos, X1 e torneio 5x5.',
+  sport: 'Basquetebol',
+  startDate: '2026',
+  eventStatus: 'https://schema.org/EventScheduled',
+  eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+  location: {
+    '@type': 'Place',
+    name: 'Zona Oeste',
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: 'São Paulo',
+      addressRegion: 'SP',
+      addressCountry: 'BR',
+    },
+  },
+  organizer: {
+    '@type': 'SportsOrganization',
+    name: 'Coyotes do Basquetebol',
+    url: 'https://basquete-coyotes.vercel.app',
+    sport: 'Basquetebol',
+  },
+  url: 'https://basquete-coyotes.vercel.app/baskferia',
+  image: 'https://basquete-coyotes.vercel.app/images/logos/logo-baskferia.png',
 }
 
 export default function Baskferia() {
   return (
     <main className="min-h-screen bg-b-dark text-white overflow-x-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
 
       {/* ── HERO BASKFERIA ── */}
       <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden noise-overlay">

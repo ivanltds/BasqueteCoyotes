@@ -14,14 +14,17 @@ export const metadata: Metadata = {
   description:
     'O Coyotes do Basquetebol é um projeto esportivo e social desde 2009 na Zona Oeste de São Paulo. Treinos de basquete, cultura streetball e o evento Baskferia. Junte-se à matilha!',
   keywords: [
-    'basquete zona oeste sp', 
-    'projeto social basquete sp', 
-    'streetball são paulo', 
-    'baskferia 2026', 
-    'coyotes basquetebol', 
-    'treino basquete iniciante sp', 
+    'basquete zona oeste sp',
+    'projeto social basquete sp',
+    'streetball são paulo',
+    'baskferia',
+    'baskferia 2026',
+    'coyotes basquetebol',
+    'coyotes do basquetebol',
+    'treino basquete iniciante sp',
     'esporte comunitário sp',
-    'basquete de rua vila madalena'
+    'basquete de rua vila madalena',
+    'torneio basquete sp',
   ],
   alternates: {
     canonical: '/',
