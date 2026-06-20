@@ -1,24 +1,39 @@
 /**
  * DynamicGallery — React Server Component
  *
- * Busca as imagens da pasta configurada no Cloudinary e renderiza o grid.
- * Nenhum código chega ao browser — credenciais 100% seguras.
+ * Busca as imagens de cada sub-pasta do Cloudinary em paralelo
+ * e renderiza uma galeria com abas (Antigas / Baskferia '25 / Jogos).
  *
  * Para adicionar fotos: acesse o painel do Cloudinary, entre na pasta
- * configurada em CLOUDINARY_GALLERY_FOLDER e faça upload. O site
- * atualiza em até 60 segundos (configurável em lib/cloudinary.ts).
+ * desejada dentro de coyotes/gallery/ e faça upload. O site atualiza
+ * em até 60 segundos.
  */
 
 import { getCloudinaryImages } from '@/lib/cloudinary'
-import GalleryGrid from './GalleryGrid'
+import GalleryTabs from './GalleryTabs'
 
-const CLOUD_NAME     = process.env.CLOUDINARY_CLOUD_NAME ?? ''
-const GALLERY_FOLDER = process.env.CLOUDINARY_GALLERY_FOLDER ?? 'coyotes/gallery'
+const BASE = process.env.CLOUDINARY_GALLERY_FOLDER ?? 'coyotes/gallery'
+
+const GALLERIES = [
+  { id: 'antigas',     label: 'Antigas',       folder: `${BASE}/antigas` },
+  { id: 'baskferia25', label: "Baskferia '25",  folder: `${BASE}/baskferia25` },
+  { id: 'jogo',        label: 'Jogos',          folder: `${BASE}/jogo` },
+]
 
 export default async function DynamicGallery() {
-  const images = await getCloudinaryImages(GALLERY_FOLDER, 500)
+  const results = await Promise.all(
+    GALLERIES.map((g) => getCloudinaryImages(g.folder, 500))
+  )
 
-  if (images.length === 0) {
+  const galleries = GALLERIES.map((g, i) => ({
+    id: g.id,
+    label: g.label,
+    images: results[i],
+  }))
+
+  const total = galleries.reduce((sum, g) => sum + g.images.length, 0)
+
+  if (total === 0) {
     return (
       <div className="border-2 border-dashed border-b-stone p-16 text-center">
         <p className="font-display text-3xl text-gray-700 uppercase mb-3">
@@ -33,21 +48,24 @@ export default async function DynamicGallery() {
             className="text-b-orange underline hover:text-b-neon transition-colors"
           >
             Cloudinary
-          </a>
-          {' '}dentro da pasta{' '}
+          </a>{' '}
+          dentro das pastas{' '}
           <code className="font-mono text-b-neon bg-b-stone px-2 py-0.5">
-            {GALLERY_FOLDER}
+            {BASE}/antigas
           </code>
-          {' '}e as fotos aparecem aqui automaticamente.
+          ,{' '}
+          <code className="font-mono text-b-neon bg-b-stone px-2 py-0.5">
+            baskferia25
+          </code>{' '}
+          ou{' '}
+          <code className="font-mono text-b-neon bg-b-stone px-2 py-0.5">
+            jogo
+          </code>
+          .
         </p>
-        {!CLOUD_NAME && (
-          <p className="font-mono text-yellow-600 text-xs mt-4 border border-yellow-900 bg-yellow-950/30 px-4 py-2 inline-block">
-            ⚠ CLOUDINARY_CLOUD_NAME não configurado no .env.local
-          </p>
-        )}
       </div>
     )
   }
 
-  return <GalleryGrid images={images} />
+  return <GalleryTabs galleries={galleries} />
 }
