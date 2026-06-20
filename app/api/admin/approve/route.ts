@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
   }
 
   const renamed = await res.json()
-  console.log('[Approve] Rename ok:', renamed.public_id)
-  return NextResponse.json({ ok: true, to_public_id })
+  console.log('[Approve] Rename ok — Cloudinary public_id:', renamed.public_id)
+  // Retorna o public_id real do Cloudinary para debug no browser
+  return NextResponse.json({ ok: true, to_public_id, cloudinary_public_id: renamed.public_id })
 }

@@ -125,7 +125,11 @@ function TabAprovacoes() {
       console.error('[Approve] Erro:', d)
       alert(d.error ?? 'Erro ao aprovar.')
     } else {
-      console.log('[Approve] OK →', d.to_public_id, d.skipped ? '(skipped)' : '')
+      console.log('[Approve] calculado:', d.to_public_id)
+      console.log('[Approve] Cloudinary real:', d.cloudinary_public_id)
+      if (d.cloudinary_public_id && d.cloudinary_public_id !== d.to_public_id) {
+        console.warn('[Approve] DIVERGÊNCIA entre calculado e real!')
+      }
       setPhotos(prev => prev.filter(p => p.public_id !== photo.public_id))
     }
     setBusy(null)
