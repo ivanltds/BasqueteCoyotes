@@ -53,19 +53,22 @@ export async function getCloudinaryImages(
   }
 
   try {
-    // Resources API — sem delay de indexação (diferente da Search API)
     const credentials = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')
-    const params = new URLSearchParams({
-      type:        'upload',
-      prefix:      folder + '/',
-      max_results: String(maxResults + 5),
-    })
 
     const res = await fetch(
-      `https://api.cloudinary.com/v1_1/${cloudName}/resources/image?${params}`,
+      `https://api.cloudinary.com/v1_1/${cloudName}/resources/search`,
       {
-        headers: { Authorization: `Basic ${credentials}` },
-        next: { revalidate: 30 },
+        method: 'POST',
+        headers: {
+          Authorization:  `Basic ${credentials}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          expression:  `folder:"${folder}"`,
+          max_results: maxResults + 5,
+          sort_by:     [{ public_id: 'asc' }],
+        }),
+        next: { revalidate: 15 },
       }
     )
 
@@ -76,11 +79,7 @@ export async function getCloudinaryImages(
     }
 
     const data: CloudinarySearchResponse = await res.json()
-
-    // Filtrar apenas recursos do folder exato (prefix pode trazer subpastas)
-    let resources = (data.resources ?? []).filter(
-      (r: CloudinaryImage) => r.public_id.startsWith(folder + '/')
-    )
+    let resources = data.resources ?? []
 
     // FILTRO: Removemos o arquivo do treinador se não pularmos o filtro.
     // Checamos public_id e display_name.
