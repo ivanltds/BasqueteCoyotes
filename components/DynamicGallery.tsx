@@ -1,67 +1,51 @@
 /**
  * DynamicGallery — React Server Component
  *
- * Busca as imagens de cada sub-pasta do Cloudinary em paralelo
- * e renderiza uma galeria com abas (Antigas / Baskferia '25 / Jogos).
+ * Lê a lista de galerias do Supabase e busca as imagens de cada
+ * sub-pasta no Cloudinary em paralelo.
  *
- * Para adicionar fotos: acesse o painel do Cloudinary, entre na pasta
- * desejada dentro de coyotes/gallery/ e faça upload. O site atualiza
- * em até 60 segundos.
+ * Para adicionar uma galeria: acesse /admin/galleries.
+ * Para adicionar fotos: clique em "+ Enviar Foto" no site ou faça
+ * upload direto no painel do Cloudinary e aprove em /admin.
  */
 
+import { getSupabaseAdmin } from '@/lib/supabase-server'
 import { getCloudinaryImages } from '@/lib/cloudinary'
 import GalleryTabs from './GalleryTabs'
 
-const BASE = process.env.CLOUDINARY_GALLERY_FOLDER ?? 'coyotes/gallery'
-
-const GALLERIES = [
-  { id: 'antigas',     label: 'Antigas',       folder: `${BASE}/antigas` },
-  { id: 'baskferia25', label: "Baskferia '25",  folder: `${BASE}/baskferia25` },
-  { id: 'jogo',        label: 'Jogos',          folder: `${BASE}/jogo` },
-]
+const GALLERY_BASE = process.env.CLOUDINARY_GALLERY_FOLDER ?? 'coyotes/gallery'
 
 export default async function DynamicGallery() {
-  const results = await Promise.all(
-    GALLERIES.map((g) => getCloudinaryImages(g.folder, 500))
+  // 1. Busca galerias configuradas
+  const sb = getSupabaseAdmin()
+  const { data: rows } = await sb
+    .from('galleries')
+    .select('id, folder_slug, display_name, sort_order')
+    .order('sort_order', { ascending: true })
+
+  const galleryDefs = rows ?? []
+
+  // 2. Busca imagens de cada galeria em paralelo
+  const images = await Promise.all(
+    galleryDefs.map(g => getCloudinaryImages(`${GALLERY_BASE}/${g.folder_slug}`, 500))
   )
 
-  const galleries = GALLERIES.map((g, i) => ({
-    id: g.id,
-    label: g.label,
-    images: results[i],
+  const galleries = galleryDefs.map((g, i) => ({
+    id:           g.folder_slug,
+    label:        g.display_name,
+    images:       images[i],
   }))
 
-  const total = galleries.reduce((sum, g) => sum + g.images.length, 0)
+  const total = galleries.reduce((s, g) => s + g.images.length, 0)
 
-  if (total === 0) {
+  if (galleryDefs.length === 0 || total === 0) {
     return (
       <div className="border-2 border-dashed border-b-stone p-16 text-center">
-        <p className="font-display text-3xl text-gray-700 uppercase mb-3">
-          Galeria Vazia
-        </p>
-        <p className="font-body text-gray-600 text-sm leading-relaxed max-w-md mx-auto">
-          Faça upload das fotos no painel do{' '}
-          <a
-            href="https://cloudinary.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-b-orange underline hover:text-b-neon transition-colors"
-          >
-            Cloudinary
-          </a>{' '}
-          dentro das pastas{' '}
-          <code className="font-mono text-b-neon bg-b-stone px-2 py-0.5">
-            {BASE}/antigas
-          </code>
-          ,{' '}
-          <code className="font-mono text-b-neon bg-b-stone px-2 py-0.5">
-            baskferia25
-          </code>{' '}
-          ou{' '}
-          <code className="font-mono text-b-neon bg-b-stone px-2 py-0.5">
-            jogo
-          </code>
-          .
+        <p className="font-display text-3xl text-gray-700 uppercase mb-3">Galeria Vazia</p>
+        <p className="font-body text-gray-600 text-sm">
+          Crie galerias em{' '}
+          <span className="font-mono text-b-neon">/admin/galleries</span>{' '}
+          e faça upload de fotos pelo botão no site ou pelo painel do Cloudinary.
         </p>
       </div>
     )

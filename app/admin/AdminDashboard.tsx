@@ -2,13 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-
-const GALLERY_LABELS: Record<string, string> = {
-  antigas:     'Antigas',
-  baskferia25: "Baskferia '25",
-  jogo:        'Jogos',
-}
 
 interface PendingPhoto {
   public_id: string
@@ -21,16 +16,24 @@ interface PendingPhoto {
 
 export default function AdminDashboard() {
   const router = useRouter()
-  const [photos, setPhotos]   = useState<PendingPhoto[]>([])
-  const [loading, setLoading] = useState(true)
-  const [busy, setBusy]       = useState<string | null>(null) // public_id em processamento
+  const [photos, setPhotos]     = useState<PendingPhoto[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [busy, setBusy]         = useState<string | null>(null)
+  const [galleryLabels, setGalleryLabels] = useState<Record<string, string>>({})
 
   const fetchPending = useCallback(async () => {
     setLoading(true)
-    const res = await fetch('/api/admin/pending')
-    if (res.status === 401) { router.push('/admin/login'); return }
-    const data = await res.json()
-    setPhotos(data.photos ?? [])
+    const [pendingRes, galleriesRes] = await Promise.all([
+      fetch('/api/admin/pending'),
+      fetch('/api/galleries'),
+    ])
+    if (pendingRes.status === 401) { router.push('/admin/login'); return }
+    const pendingData   = await pendingRes.json()
+    const galleriesData = await galleriesRes.json()
+    setPhotos(pendingData.photos ?? [])
+    const labels: Record<string, string> = {}
+    for (const g of galleriesData.galleries ?? []) labels[g.folder_slug] = g.display_name
+    setGalleryLabels(labels)
     setLoading(false)
   }, [router])
 
@@ -75,12 +78,20 @@ export default function AdminDashboard() {
             // coyotes do basquetebol
           </p>
         </div>
-        <button
-          onClick={logout}
-          className="font-mono text-xs uppercase text-gray-500 hover:text-b-orange transition-colors border border-b-stone px-4 py-2"
-        >
-          Sair
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/galleries"
+            className="font-mono text-xs uppercase text-gray-400 hover:text-b-neon transition-colors border border-b-stone px-4 py-2"
+          >
+            Galerias
+          </Link>
+          <button
+            onClick={logout}
+            className="font-mono text-xs uppercase text-gray-500 hover:text-b-orange transition-colors border border-b-stone px-4 py-2"
+          >
+            Sair
+          </button>
+        </div>
       </header>
 
       <div className="px-8 py-10 max-w-7xl mx-auto">
@@ -123,7 +134,7 @@ export default function AdminDashboard() {
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-[10px] uppercase text-gray-500">Destino:</span>
                         <span className="font-display text-sm text-b-neon uppercase">
-                          {GALLERY_LABELS[target] ?? target}
+                          {galleryLabels[target] ?? target}
                         </span>
                       </div>
                       <p className="font-mono text-[10px] text-gray-600 truncate">{photo.public_id}</p>

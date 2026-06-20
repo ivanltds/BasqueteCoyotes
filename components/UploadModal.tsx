@@ -1,20 +1,24 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 
-const GALLERIES = [
-  { id: 'antigas',     label: 'Antigas' },
-  { id: 'baskferia25', label: "Baskferia '25" },
-  { id: 'jogo',        label: 'Jogos' },
-]
+interface GalleryOption { id: string; label: string }
 
 interface UploadModalProps {
   onClose: () => void
 }
 
 export default function UploadModal({ onClose }: UploadModalProps) {
+  const [galleries, setGalleries] = useState<GalleryOption[]>([])
+
+  useEffect(() => {
+    fetch('/api/galleries')
+      .then(r => r.json())
+      .then(d => setGalleries((d.galleries ?? []).map((g: { folder_slug: string; display_name: string }) => ({ id: g.folder_slug, label: g.display_name }))))
+      .catch(() => {})
+  }, [])
   const inputRef              = useRef<HTMLInputElement>(null)
-  const [target, setTarget]   = useState('antigas')
+  const [target, setTarget]   = useState('')
   const [file, setFile]       = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
@@ -105,8 +109,11 @@ export default function UploadModal({ onClose }: UploadModalProps) {
               {/* Seleção de galeria */}
               <div>
                 <span className="font-mono text-xs uppercase text-gray-500 mb-3 block">Para qual galeria?</span>
+                {galleries.length === 0 && (
+                  <p className="font-mono text-xs text-gray-600 animate-pulse">Carregando galerias...</p>
+                )}
                 <div className="flex gap-2 flex-wrap">
-                  {GALLERIES.map(g => (
+                  {galleries.map(g => (
                     <button
                       key={g.id}
                       onClick={() => setTarget(g.id)}
@@ -177,7 +184,7 @@ export default function UploadModal({ onClose }: UploadModalProps) {
 
               <button
                 onClick={handleUpload}
-                disabled={!file || status === 'uploading'}
+                disabled={!file || !target || status === 'uploading'}
                 className="w-full bg-b-orange text-b-dark font-display text-xl uppercase py-4 tracking-widest shadow-brutal hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-x-0 disabled:translate-y-0 disabled:shadow-brutal"
               >
                 {status === 'uploading' ? `Enviando... ${progress}%` : 'Enviar Foto'}
