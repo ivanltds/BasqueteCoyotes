@@ -55,31 +55,44 @@ export async function getCloudinaryImages(
   try {
     const credentials = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')
 
-    const res = await fetch(
-      `https://api.cloudinary.com/v1_1/${cloudName}/resources/search`,
-      {
+    // Consulta ambas as APIs em paralelo:
+    // - Search API  → acha fotos antigas (public_id sem path, folder via asset_folder)
+    // - Resources API → acha fotos aprovadas pelo sistema (public_id com path completo)
+    const [searchRes, resourcesRes] = await Promise.all([
+      fetch(`https://api.cloudinary.com/v1_1/${cloudName}/resources/search`, {
         method: 'POST',
-        headers: {
-          Authorization:  `Basic ${credentials}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { Authorization: `Basic ${credentials}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           expression:  `folder:"${folder}"`,
           max_results: maxResults + 5,
           sort_by:     [{ public_id: 'asc' }],
         }),
         next: { revalidate: 15 },
+      }),
+      fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/resources/image?` +
+          `type=upload&prefix=${encodeURIComponent(folder + '/')}&max_results=${maxResults + 5}`,
+        {
+          headers: { Authorization: `Basic ${credentials}` },
+          next: { revalidate: 15 },
+        }
+      ),
+    ])
+
+    const [searchData, resourcesData] = await Promise.all([
+      searchRes.ok  ? searchRes.json()    : Promise.resolve({ resources: [] }),
+      resourcesRes.ok ? resourcesRes.json() : Promise.resolve({ resources: [] }),
+    ])
+
+    // Mescla e remove duplicatas pelo public_id
+    const seen  = new Set<string>()
+    let resources: CloudinaryImage[] = []
+    for (const r of [...(searchData.resources ?? []), ...(resourcesData.resources ?? [])]) {
+      if (!seen.has(r.public_id)) {
+        seen.add(r.public_id)
+        resources.push(r)
       }
-    )
-
-    if (!res.ok) {
-      const err = await res.text()
-      console.error('[Cloudinary] Erro na API:', res.status, err)
-      return []
     }
-
-    const data: CloudinarySearchResponse = await res.json()
-    let resources = data.resources ?? []
 
     // FILTRO: Removemos o arquivo do treinador se não pularmos o filtro.
     // Checamos public_id e display_name.
