@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { track } from '@vercel/analytics'
 
 const MODALITIES = [
   { id: '3pts', label: 'Arremesso de 3 Pontos', icon: '🏀', restricted: true },
@@ -57,10 +58,9 @@ export default function PreInscricaoPage() {
   }, [])
 
   const selectModality = (id: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      modality: prev.modality === id ? '' : id,
-    }))
+    const next = formData.modality === id ? '' : id
+    if (next) track('modality_selected', { modality: next })
+    setFormData((prev) => ({ ...prev, modality: next }))
   }
 
   const isRestrictedSelected = MODALITIES.find((m) => m.id === formData.modality)?.restricted
@@ -68,6 +68,7 @@ export default function PreInscricaoPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+    track('form_submit_attempt', { modality: formData.modality, gender: formData.gender, age_group: formData.ageGroup })
     
     const normalizedEmail = formData.email.trim().toLowerCase()
     const normalizedWhatsapp = formData.whatsapp.replace(/\D/g, '')
@@ -84,6 +85,7 @@ export default function PreInscricaoPage() {
       }
 
       if (existing) {
+        track('form_duplicate', { modality: formData.modality })
         alert('Ei! Já encontramos uma inscrição com este E-mail ou WhatsApp. Cada pessoa pode se inscrever apenas uma vez.')
         setIsSubmitting(false)
         return
@@ -105,9 +107,16 @@ export default function PreInscricaoPage() {
 
       if (error) throw error
 
+      track('pre_inscricao_concluida', {
+        modality: formData.modality,
+        gender: formData.gender,
+        age_group: formData.ageGroup,
+        has_team: !!formData.teamName,
+      })
       setSubmitted(true)
       fetchStats() // Atualiza os números após o envio
     } catch (error) {
+      track('form_error', { modality: formData.modality })
       console.error('Erro ao salvar no Supabase:', error)
       alert('Ops! Tivemos um problema ao salvar sua inscrição. Verifique se você já se inscreveu ou tente novamente mais tarde.')
     } finally {
