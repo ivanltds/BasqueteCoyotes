@@ -84,10 +84,12 @@ export default function AdminShell() {
 
 function TabAprovacoes() {
   const router = useRouter()
-  const [photos, setPhotos]           = useState<PendingPhoto[]>([])
-  const [galleryLabels, setLabels]    = useState<Record<string, string>>({})
-  const [loading, setLoading]         = useState(true)
-  const [busy, setBusy]               = useState<string | null>(null)
+  const [photos, setPhotos]         = useState<PendingPhoto[]>([])
+  const [galleries, setGalleries]   = useState<{ folder_slug: string; display_name: string }[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [busy, setBusy]             = useState<string | null>(null)
+  // mapa de overrides: public_id → galeria escolhida pelo admin
+  const [overrides, setOverrides]   = useState<Record<string, string>>({})
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -99,16 +101,19 @@ function TabAprovacoes() {
     const pd = await pr.json()
     const gd = await gr.json()
     setPhotos(pd.photos ?? [])
-    const labels: Record<string, string> = {}
-    for (const g of gd.galleries ?? []) labels[g.folder_slug] = g.display_name
-    setLabels(labels)
+    setGalleries(gd.galleries ?? [])
     setLoading(false)
   }, [router])
 
   useEffect(() => { load() }, [load])
 
+  function targetFor(photo: PendingPhoto) {
+    return overrides[photo.public_id] ?? photo.context?.custom?.target_gallery ?? galleries[0]?.folder_slug ?? ''
+  }
+
   async function approve(photo: PendingPhoto) {
-    const target = photo.context?.custom?.target_gallery ?? 'antigas'
+    const target = targetFor(photo)
+    if (!target) { alert('Selecione uma galeria de destino.'); return }
     setBusy(photo.public_id)
     const res = await fetch('/api/admin/approve', {
       method: 'POST',
@@ -151,21 +156,35 @@ function TabAprovacoes() {
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         {photos.map(photo => {
-          const target = photo.context?.custom?.target_gallery ?? '?'
-          const isBusy = busy === photo.public_id
+          const isBusy  = busy === photo.public_id
+          const current = targetFor(photo)
+
           return (
             <div key={photo.public_id} className="bg-b-gray border-2 border-b-stone flex flex-col">
               <div className="relative aspect-square bg-b-dark">
                 <Image src={photo.secure_url} alt="Foto pendente" fill className="object-cover" sizes="(max-width: 640px) 100vw, 33vw" />
               </div>
+
               <div className="p-4 flex flex-col gap-3 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[10px] uppercase text-gray-500">Destino:</span>
-                  <span className="font-display text-sm text-b-neon uppercase">{galleryLabels[target] ?? target}</span>
+                {/* Seletor de galeria */}
+                <div>
+                  <span className="font-mono text-[10px] uppercase text-gray-500 mb-1.5 block">Galeria de destino</span>
+                  <select
+                    value={current}
+                    onChange={e => setOverrides(prev => ({ ...prev, [photo.public_id]: e.target.value }))}
+                    disabled={isBusy}
+                    className="w-full bg-b-dark border-2 border-b-neon text-b-neon font-display text-sm uppercase px-3 py-2 outline-none appearance-none cursor-pointer hover:border-b-orange transition-colors disabled:opacity-40"
+                  >
+                    {galleries.map(g => (
+                      <option key={g.folder_slug} value={g.folder_slug}>{g.display_name}</option>
+                    ))}
+                  </select>
                 </div>
+
                 <p className="font-mono text-[10px] text-gray-600 truncate">{photo.public_id}</p>
+
                 <div className="flex gap-2 mt-auto">
-                  <button onClick={() => approve(photo)} disabled={isBusy}
+                  <button onClick={() => approve(photo)} disabled={isBusy || !current}
                     className="flex-1 bg-b-neon text-b-dark font-display text-sm uppercase py-2 tracking-wider hover:opacity-90 disabled:opacity-40">
                     {isBusy ? '...' : '✓ Aprovar'}
                   </button>
