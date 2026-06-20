@@ -120,11 +120,12 @@ function TabAprovacoes() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ public_id: photo.public_id, target_gallery: target }),
     })
+    const d = await res.json()
     if (!res.ok) {
-      const d = await res.json()
+      console.error('[Approve] Erro:', d)
       alert(d.error ?? 'Erro ao aprovar.')
     } else {
-      // Remove localmente — o índice de search do Cloudinary tem delay de atualização
+      console.log('[Approve] OK →', d.to_public_id, d.skipped ? '(skipped)' : '')
       setPhotos(prev => prev.filter(p => p.public_id !== photo.public_id))
     }
     setBusy(null)

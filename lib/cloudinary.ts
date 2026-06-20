@@ -48,31 +48,26 @@ export async function getCloudinaryImages(
   const apiSecret  = process.env.CLOUDINARY_API_SECRET
 
   if (!cloudName || !apiKey || !apiSecret) {
-    console.warn(
-      '[Cloudinary] Variáveis de ambiente não configuradas.'
-    )
+    console.warn('[Cloudinary] Variáveis de ambiente não configuradas.')
     return []
   }
 
   try {
-    const url = `https://api.cloudinary.com/v1_1/${cloudName}/resources/search`
+    // Resources API — sem delay de indexação (diferente da Search API)
     const credentials = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')
-
-    const body = JSON.stringify({
-      expression: `folder:"${folder}"`,
-      max_results: maxResults + 5,
-      sort_by: [{ public_id: 'asc' }],
+    const params = new URLSearchParams({
+      type:        'upload',
+      prefix:      folder + '/',
+      max_results: String(maxResults + 5),
     })
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${credentials}`,
-        'Content-Type': 'application/json',
-      },
-      body,
-      next: { revalidate: 60 },
-    })
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${cloudName}/resources/image?${params}`,
+      {
+        headers: { Authorization: `Basic ${credentials}` },
+        next: { revalidate: 30 },
+      }
+    )
 
     if (!res.ok) {
       const err = await res.text()
@@ -81,7 +76,11 @@ export async function getCloudinaryImages(
     }
 
     const data: CloudinarySearchResponse = await res.json()
-    let resources = data.resources ?? []
+
+    // Filtrar apenas recursos do folder exato (prefix pode trazer subpastas)
+    let resources = (data.resources ?? []).filter(
+      (r: CloudinaryImage) => r.public_id.startsWith(folder + '/')
+    )
 
     // FILTRO: Removemos o arquivo do treinador se não pularmos o filtro.
     // Checamos public_id e display_name.
