@@ -317,7 +317,7 @@ export default function PreInscricaoPage() {
                 Selecione uma modalidade para continuar.
               </p>
             )}
-          </div}
+          </div>
 
         </form>
       </div>
