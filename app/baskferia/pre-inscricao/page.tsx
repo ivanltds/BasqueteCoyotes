@@ -6,9 +6,9 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
 const MODALITIES = [
-  { id: '3pts', label: 'Arremesso de 3 Pontos', icon: '🏀', restricted: false },
+  { id: '3pts', label: 'Arremesso de 3 Pontos', icon: '🏀', restricted: true },
   { id: '2pts', label: 'Arremesso de 2 Pontos', icon: '🎯', restricted: false },
-  { id: 'skills', label: 'Desafio de Habilidades', icon: '⚡', restricted: true },
+  { id: 'skills', label: 'Desafio de Habilidades', icon: '⚡', restricted: false },
   { id: 'x1', label: 'X1 — Um contra Um', icon: '🔥', restricted: true },
 ]
 
@@ -250,7 +250,7 @@ export default function PreInscricaoPage() {
             <h2 className="font-display text-3xl uppercase text-b-orange tracking-widest">02. Modalidade</h2>
             <div className="bg-b-orange/10 border-l-4 border-b-orange p-4 mb-4">
               <p className="font-body text-sm text-b-orange leading-relaxed">
-                <strong>Importante:</strong> Para as modalidades de <strong>X1 e Habilidades</strong>, apenas jogadores inscritos e escalados oficialmente pelas equipes do campeonato 5x5 podem participar. Escolha apenas <strong>uma</strong> modalidade.
+                <strong>Importante:</strong> O <strong>Desafio de Habilidades</strong> está aberto a todos. Já o <strong>Arremesso de 3 Pontos e o X1</strong> são exclusivos para jogadores inscritos e escalados oficialmente pelas equipes do campeonato 5x5. Escolha apenas <strong>uma</strong> modalidade.
               </p>
             </div>
             
@@ -317,9 +317,4 @@ export default function PreInscricaoPage() {
                 Selecione uma modalidade para continuar.
               </p>
             )}
-          </div>
-        </form>
-      </div>
-    </main>
-  )
-}
+          </div
