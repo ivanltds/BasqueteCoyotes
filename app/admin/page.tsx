@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 import { isAuthenticated } from '@/lib/admin-auth'
-import AdminDashboard from './AdminDashboard'
+import AdminShell from './AdminShell'
 
 export default async function AdminPage() {
   if (!(await isAuthenticated())) redirect('/admin/login')
-  return <AdminDashboard />
+  return <AdminShell />
 }
