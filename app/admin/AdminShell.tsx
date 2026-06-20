@@ -123,21 +123,27 @@ function TabAprovacoes() {
     if (!res.ok) {
       const d = await res.json()
       alert(d.error ?? 'Erro ao aprovar.')
+    } else {
+      // Remove localmente — o índice de search do Cloudinary tem delay de atualização
+      setPhotos(prev => prev.filter(p => p.public_id !== photo.public_id))
     }
     setBusy(null)
-    load()
   }
 
   async function reject(photo: PendingPhoto) {
     if (!confirm('Recusar e apagar esta foto permanentemente?')) return
     setBusy(photo.public_id)
-    await fetch('/api/admin/reject', {
+    const res = await fetch('/api/admin/reject', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ public_id: photo.public_id }),
     })
+    if (res.ok) {
+      setPhotos(prev => prev.filter(p => p.public_id !== photo.public_id))
+    } else {
+      alert('Erro ao recusar foto.')
+    }
     setBusy(null)
-    load()
   }
 
   if (loading) return <Spinner />
