@@ -23,13 +23,17 @@ export async function POST(req: NextRequest) {
   }
 
   // Novo public_id: coyotes/gallery/{target}/nome-do-arquivo
-  const filename   = public_id.split('/').pop()
+  const filename     = public_id.split('/').pop()
   const to_public_id = `${GALLERY_BASE}/${target_gallery}/${filename}`
+
+  // Foto já está no destino correto (aprovação dupla ou rename anterior)
+  if (public_id === to_public_id) {
+    return NextResponse.json({ ok: true, to_public_id, skipped: true })
+  }
 
   const credentials = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')
 
-  // Cloudinary rename API usa form-encoded, não JSON
-  const body = new URLSearchParams({
+  const formBody = new URLSearchParams({
     from_public_id: public_id,
     to_public_id,
     overwrite: 'true',
@@ -41,14 +45,20 @@ export async function POST(req: NextRequest) {
       Authorization: `Basic ${credentials}`,
       'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: body.toString(),
+    body: formBody.toString(),
   })
 
   if (!res.ok) {
-    const err = await res.text()
-    console.error('[Approve] Erro Cloudinary:', res.status, err)
+    const errText = await res.text()
+
+    // "same public_id" = foto já está no destino, tratar como sucesso
+    if (res.status === 400 && errText.includes('same public_id')) {
+      return NextResponse.json({ ok: true, to_public_id, skipped: true })
+    }
+
+    console.error('[Approve] Erro Cloudinary:', res.status, errText)
     return NextResponse.json(
-      { error: `Cloudinary: ${res.status} — ${err}` },
+      { error: `Cloudinary: ${res.status} — ${errText}` },
       { status: 500 }
     )
   }
