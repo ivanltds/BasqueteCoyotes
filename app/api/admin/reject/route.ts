@@ -22,17 +22,21 @@ export async function POST(req: NextRequest) {
 
   const credentials = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')
 
+  const body = new URLSearchParams({ public_id, invalidate: 'true' })
+
   const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`, {
     method: 'POST',
     headers: {
       Authorization: `Basic ${credentials}`,
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: JSON.stringify({ public_id, invalidate: true }),
+    body: body.toString(),
   })
 
   if (!res.ok) {
-    return NextResponse.json({ error: 'Erro ao deletar imagem.' }, { status: 500 })
+    const err = await res.text()
+    console.error('[Reject] Erro Cloudinary:', res.status, err)
+    return NextResponse.json({ error: `Cloudinary: ${res.status} — ${err}` }, { status: 500 })
   }
 
   return NextResponse.json({ ok: true })

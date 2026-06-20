@@ -28,19 +28,29 @@ export async function POST(req: NextRequest) {
 
   const credentials = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')
 
+  // Cloudinary rename API usa form-encoded, não JSON
+  const body = new URLSearchParams({
+    from_public_id: public_id,
+    to_public_id,
+    overwrite: 'true',
+  })
+
   const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/rename`, {
     method: 'POST',
     headers: {
       Authorization: `Basic ${credentials}`,
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: JSON.stringify({ from_public_id: public_id, to_public_id, overwrite: true }),
+    body: body.toString(),
   })
 
   if (!res.ok) {
     const err = await res.text()
-    console.error('[Approve] Erro Cloudinary:', err)
-    return NextResponse.json({ error: 'Erro ao mover imagem.' }, { status: 500 })
+    console.error('[Approve] Erro Cloudinary:', res.status, err)
+    return NextResponse.json(
+      { error: `Cloudinary: ${res.status} — ${err}` },
+      { status: 500 }
+    )
   }
 
   return NextResponse.json({ ok: true, to_public_id })
