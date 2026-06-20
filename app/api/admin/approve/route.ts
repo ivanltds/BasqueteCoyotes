@@ -53,15 +53,19 @@ export async function POST(req: NextRequest) {
 
     // "same public_id" = foto já está no destino, tratar como sucesso
     if (res.status === 400 && errText.includes('same public_id')) {
+      console.log('[Approve] skipped (já no destino):', to_public_id)
       return NextResponse.json({ ok: true, to_public_id, skipped: true })
     }
 
-    console.error('[Approve] Erro Cloudinary:', res.status, errText)
+    console.error('[Approve] Erro Cloudinary rename:', res.status, errText)
+    console.error('[Approve] from:', public_id, '→ to:', to_public_id)
     return NextResponse.json(
       { error: `Cloudinary: ${res.status} — ${errText}` },
       { status: 500 }
     )
   }
 
+  const renamed = await res.json()
+  console.log('[Approve] Rename ok:', renamed.public_id)
   return NextResponse.json({ ok: true, to_public_id })
 }
