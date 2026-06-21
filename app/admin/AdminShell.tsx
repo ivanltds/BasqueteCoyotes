@@ -655,7 +655,7 @@ function TabMidia() {
       formData.append('timestamp', sig.timestamp)
       formData.append('signature', sig.signature)
       formData.append('folder', sig.folder)
-      formData.append('resource_type', sig.resource_type)
+      // resource_type vai na URL path, não no formData
 
       const uploadUrl = `https://api.cloudinary.com/v1_1/${sig.cloud_name}/auto/upload`
 

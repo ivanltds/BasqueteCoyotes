@@ -31,13 +31,14 @@ export async function GET(req: NextRequest) {
   }
 
   const timestamp     = Math.floor(Date.now() / 1000).toString()
-  const resource_type = 'auto'  // aceita imagem e vídeo
+  const resource_type = 'auto'  // aceita imagem e vídeo — vai na URL, NÃO na assinatura
 
-  // Parâmetros a assinar (ordem alfabética, sem api_key/cloud_name/file)
-  const paramsToSign = { folder, resource_type, timestamp }
+  // Cloudinary: só assinar params do body (folder, timestamp, etc.)
+  // resource_type vai na URL path (/auto/upload), não é assinado
+  const paramsToSign: Record<string, string> = { folder, timestamp }
   const str = Object.keys(paramsToSign)
     .sort()
-    .map(k => `${k}=${paramsToSign[k as keyof typeof paramsToSign]}`)
+    .map(k => `${k}=${paramsToSign[k]}`)
     .join('&')
 
   const signature = crypto
