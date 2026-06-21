@@ -13,12 +13,14 @@ interface Props {
 }
 
 export default function AudioPlayer({ tracks }: Props) {
-  const audioRef              = useRef<HTMLAudioElement>(null)
-  const [idx, setIdx]         = useState(0)
-  const [playing, setPlaying] = useState(false)
-  const [progress, setProgress] = useState(0)   // 0-1
+  const audioRef                = useRef<HTMLAudioElement>(null)
+  const [idx, setIdx]           = useState(0)
+  const [playing, setPlaying]   = useState(false)
+  const [progress, setProgress] = useState(0)     // 0-1
   const [duration, setDuration] = useState(0)
-  const [visible, setVisible] = useState(true)
+  const [volume, setVolume]     = useState(0.8)   // 0-1
+  const [muted, setMuted]       = useState(false)
+  const [visible, setVisible]   = useState(true)
 
   const current = tracks[idx]
 
@@ -31,6 +33,13 @@ export default function AudioPlayer({ tracks }: Props) {
     if (playing) audio.play().catch(() => {})
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idx])
+
+  // Sincroniza volume/mute com o elemento de áudio
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+    audio.volume = muted ? 0 : volume
+  }, [volume, muted])
 
   const play  = () => { audioRef.current?.play();  setPlaying(true)  }
   const pause = () => { audioRef.current?.pause(); setPlaying(false) }
@@ -45,9 +54,20 @@ export default function AudioPlayer({ tracks }: Props) {
     const audio = audioRef.current
     if (!audio || !duration) return
     const rect = e.currentTarget.getBoundingClientRect()
-    const ratio = (e.clientX - rect.left) / rect.width
-    audio.currentTime = ratio * duration
+    audio.currentTime = ((e.clientX - rect.left) / rect.width) * duration
   }
+
+  function handleVolume(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = parseFloat(e.target.value)
+    setVolume(v)
+    setMuted(v === 0)
+  }
+
+  function toggleMute() {
+    setMuted(m => !m)
+  }
+
+  const effectiveVolume = muted ? 0 : volume
 
   if (!tracks.length || !visible) return null
 
@@ -66,7 +86,7 @@ export default function AudioPlayer({ tracks }: Props) {
       />
 
       {/* Mini-player flutuante */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[min(480px,calc(100vw-2rem))] bg-b-dark/95 backdrop-blur border border-b-stone/40 shadow-2xl">
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[min(560px,calc(100vw-2rem))] bg-b-dark/95 backdrop-blur border border-b-stone/40 shadow-2xl">
 
         {/* Barra de progresso (clicável) */}
         <div
@@ -80,7 +100,7 @@ export default function AudioPlayer({ tracks }: Props) {
         </div>
 
         <div className="flex items-center gap-3 px-4 py-2.5">
-          {/* Controles */}
+          {/* Anterior / Play-Pause / Próxima */}
           <button
             onClick={prev}
             disabled={tracks.length <= 1}
@@ -115,10 +135,31 @@ export default function AudioPlayer({ tracks }: Props) {
             )}
           </div>
 
+          {/* Volume: ícone mute + slider */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={toggleMute}
+              className="text-gray-500 hover:text-white transition-colors text-sm leading-none w-4 text-center"
+              aria-label={muted ? 'Ativar som' : 'Mutar'}
+            >
+              {effectiveVolume === 0 ? '🔇' : effectiveVolume < 0.5 ? '🔉' : '🔊'}
+            </button>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.02}
+              value={effectiveVolume}
+              onChange={handleVolume}
+              className="w-20 h-1 accent-b-orange cursor-pointer"
+              aria-label="Volume"
+            />
+          </div>
+
           {/* Fechar */}
           <button
             onClick={() => { pause(); setVisible(false) }}
-            className="text-gray-600 hover:text-white transition-colors text-sm leading-none"
+            className="text-gray-600 hover:text-white transition-colors text-sm leading-none ml-1"
             aria-label="Fechar player"
           >✕</button>
         </div>

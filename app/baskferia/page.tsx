@@ -213,7 +213,7 @@ export default async function Baskferia() {
                 <h3 className="font-display text-4xl text-b-neon uppercase">1º Sábado</h3>
               </div>
               <p className="font-body text-gray-300 text-lg mb-8 leading-relaxed">
-                Um dia focado na democracia e celebração. Abrimos as portas para **toda a comunidade** participar, independente do nível técnico. É a chance de todos mostrarem seu talento nos desafios individuais.
+                Um dia focado na democracia e celebração. Abrimos as portas para <strong>toda a comunidade</strong> participar, independente do nível técnico. É a chance de todos mostrarem seu talento nos desafios individuais.
               </p>
               <ul className="space-y-4">
                 {[
@@ -240,13 +240,14 @@ export default async function Baskferia() {
                 25 de Julho
               </p>
               <p className="font-body text-gray-300 text-lg mb-8 leading-relaxed">
-                O dia da elite. 8 equipes selecionadas dando seu melhor em quadra. Foco total em **competitividade e alto nível**, onde apenas um sairá com o troféu de campeão.
+                O dia da elite. 8 equipes selecionadas dando seu melhor em quadra. Foco total em <strong>competitividade e alto nível</strong>, onde apenas um sairá com o troféu de campeão.
               </p>
               <ul className="space-y-4">
                 {[
                   { icon: '🏆', label: '8 Equipes', highlight: true },
                   { icon: '⚔️', label: '5 contra 5', highlight: true },
                   { icon: '⭐', label: 'Categoria Livre', highlight: true },
+                  { icon: '🥇', label: 'Final — Torneios Individuais', highlight: true },
                 ].map(({ icon, label }) => (
                   <li key={label} className="flex items-center gap-3 font-body font-bold text-white text-lg border-b border-b-stone pb-4 last:border-0 last:pb-0">
                     <span className="text-2xl">{icon}</span>
