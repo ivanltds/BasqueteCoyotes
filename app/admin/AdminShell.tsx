@@ -21,7 +21,7 @@ interface Gallery {
   photo_count: number
 }
 
-type Tab = 'aprovacoes' | 'galerias'
+type Tab = 'aprovacoes' | 'fotos' | 'galerias'
 
 // ─── Shell principal ───────────────────────────────────────────────────────────
 
@@ -56,6 +56,7 @@ export default function AdminShell() {
       <div className="border-b border-b-stone px-6 flex gap-0">
         {([
           { id: 'aprovacoes', label: 'Aprovações' },
+          { id: 'fotos',      label: 'Fotos'      },
           { id: 'galerias',   label: 'Galerias'   },
         ] as { id: Tab; label: string }[]).map(t => (
           <button
@@ -74,7 +75,9 @@ export default function AdminShell() {
 
       {/* Conteúdo */}
       <div className="px-6 py-8 max-w-7xl mx-auto">
-        {tab === 'aprovacoes' ? <TabAprovacoes /> : <TabGalerias />}
+        {tab === 'aprovacoes' && <TabAprovacoes />}
+        {tab === 'fotos'      && <TabFotos />}
+        {tab === 'galerias'   && <TabGalerias />}
       </div>
     </main>
   )
@@ -209,6 +212,184 @@ function TabAprovacoes() {
           )
         })}
       </div>
+    </div>
+  )
+}
+
+// ─── Aba: Fotos ───────────────────────────────────────────────────────────────
+
+interface GalleryPhoto {
+  public_id:  string
+  secure_url: string
+  created_at: string
+}
+
+function TabFotos() {
+  const router = useRouter()
+  const [galleries, setGalleries] = useState<{ folder_slug: string; display_name: string }[]>([])
+  const [activeSlug, setActiveSlug] = useState<string>('')
+  const [photos, setPhotos]         = useState<GalleryPhoto[]>([])
+  const [loading, setLoading]       = useState(false)
+  const [busy, setBusy]             = useState<string | null>(null)
+  const [moveTarget, setMoveTarget] = useState<Record<string, string>>({})
+
+  // Carrega lista de galerias
+  useEffect(() => {
+    fetch('/api/galleries')
+      .then(r => { if (r.status === 401) router.push('/admin/login'); return r.json() })
+      .then(d => {
+        const gals = d.galleries ?? []
+        setGalleries(gals)
+        if (gals.length > 0) setActiveSlug(gals[0].folder_slug)
+      })
+  }, [router])
+
+  // Carrega fotos da galeria ativa
+  const loadPhotos = useCallback(async (slug: string) => {
+    if (!slug) return
+    setLoading(true)
+    setPhotos([])
+    const res = await fetch(`/api/admin/gallery-photos?slug=${slug}`)
+    if (res.status === 401) { router.push('/admin/login'); return }
+    const data = await res.json()
+    setPhotos(data.photos ?? [])
+    setLoading(false)
+  }, [router])
+
+  useEffect(() => { if (activeSlug) loadPhotos(activeSlug) }, [activeSlug, loadPhotos])
+
+  function selectGallery(slug: string) {
+    setActiveSlug(slug)
+    setMoveTarget({})
+  }
+
+  function targetFor(photo: GalleryPhoto) {
+    return moveTarget[photo.public_id] ?? galleries.find(g => g.folder_slug !== activeSlug)?.folder_slug ?? ''
+  }
+
+  async function move(photo: GalleryPhoto) {
+    const to = targetFor(photo)
+    if (!to) return
+    setBusy(photo.public_id)
+    const res = await fetch('/api/admin/move', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ public_id: photo.public_id, to_gallery: to }),
+    })
+    if (res.ok) {
+      setPhotos(prev => prev.filter(p => p.public_id !== photo.public_id))
+    } else {
+      const d = await res.json()
+      alert(d.error ?? 'Erro ao mover.')
+    }
+    setBusy(null)
+  }
+
+  async function remove(photo: GalleryPhoto) {
+    if (!confirm('Apagar esta foto permanentemente?')) return
+    setBusy(photo.public_id)
+    const res = await fetch('/api/admin/reject', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ public_id: photo.public_id }),
+    })
+    if (res.ok) {
+      setPhotos(prev => prev.filter(p => p.public_id !== photo.public_id))
+    } else {
+      alert('Erro ao apagar.')
+    }
+    setBusy(null)
+  }
+
+  const otherGalleries = galleries.filter(g => g.folder_slug !== activeSlug)
+
+  return (
+    <div>
+      {/* Seletor de galeria */}
+      <div className="flex gap-0 border-b border-b-stone mb-8 overflow-x-auto">
+        {galleries.map(g => (
+          <button
+            key={g.folder_slug}
+            onClick={() => selectGallery(g.folder_slug)}
+            className={`font-display text-base uppercase px-5 py-2.5 tracking-widest border-b-2 whitespace-nowrap transition-all ${
+              activeSlug === g.folder_slug
+                ? 'border-b-neon text-b-neon'
+                : 'border-transparent text-gray-500 hover:text-white'
+            }`}
+          >
+            {g.display_name}
+          </button>
+        ))}
+      </div>
+
+      {loading && <Spinner />}
+
+      {!loading && photos.length === 0 && (
+        <div className="border-2 border-dashed border-b-stone p-20 text-center">
+          <p className="font-display text-4xl text-gray-700 uppercase">Galeria vazia</p>
+        </div>
+      )}
+
+      {!loading && photos.length > 0 && (
+        <>
+          <p className="font-mono text-xs text-gray-500 uppercase tracking-widest mb-6">
+            {photos.length} foto{photos.length !== 1 ? 's' : ''} em{' '}
+            <span className="text-b-neon">{galleries.find(g => g.folder_slug === activeSlug)?.display_name}</span>
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {photos.map(photo => {
+              const isBusy = busy === photo.public_id
+              const to     = targetFor(photo)
+
+              return (
+                <div key={photo.public_id} className="bg-b-gray border-2 border-b-stone flex flex-col">
+                  <div className="relative aspect-square bg-b-dark">
+                    <Image src={photo.secure_url} alt="Foto" fill className="object-cover" sizes="(max-width: 640px) 100vw, 33vw" />
+                  </div>
+
+                  <div className="p-3 flex flex-col gap-2 flex-1">
+                    {otherGalleries.length > 0 && (
+                      <div>
+                        <span className="font-mono text-[10px] uppercase text-gray-500 mb-1 block">Mover para</span>
+                        <select
+                          value={to}
+                          onChange={e => setMoveTarget(prev => ({ ...prev, [photo.public_id]: e.target.value }))}
+                          disabled={isBusy}
+                          className="w-full bg-b-dark border border-b-stone text-white font-mono text-xs px-2 py-1.5 outline-none appearance-none cursor-pointer hover:border-b-orange transition-colors disabled:opacity-40"
+                        >
+                          {otherGalleries.map(g => (
+                            <option key={g.folder_slug} value={g.folder_slug}>{g.display_name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2 mt-auto">
+                      {otherGalleries.length > 0 && (
+                        <button
+                          onClick={() => move(photo)}
+                          disabled={isBusy || !to}
+                          className="flex-1 bg-b-orange text-b-dark font-display text-xs uppercase py-2 tracking-wider hover:opacity-90 disabled:opacity-40"
+                        >
+                          {isBusy ? '...' : '→ Mover'}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => remove(photo)}
+                        disabled={isBusy}
+                        className="flex-1 border border-red-900 text-red-400 font-display text-xs uppercase py-2 tracking-wider hover:bg-red-950 disabled:opacity-40"
+                      >
+                        {isBusy ? '...' : '✕ Apagar'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
     </div>
   )
 }
