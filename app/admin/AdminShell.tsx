@@ -232,6 +232,7 @@ function TabFotos() {
   const [loading, setLoading]       = useState(false)
   const [busy, setBusy]             = useState<string | null>(null)
   const [moveTarget, setMoveTarget] = useState<Record<string, string>>({})
+  const [movingPhoto, setMovingPhoto] = useState<string | null>(null) // public_id com painel de mover aberto
 
   // Carrega lista de galerias
   useEffect(() => {
@@ -261,6 +262,7 @@ function TabFotos() {
   function selectGallery(slug: string) {
     setActiveSlug(slug)
     setMoveTarget({})
+    setMovingPhoto(null)
   }
 
   function targetFor(photo: GalleryPhoto) {
@@ -278,6 +280,7 @@ function TabFotos() {
     })
     if (res.ok) {
       setPhotos(prev => prev.filter(p => p.public_id !== photo.public_id))
+      setMovingPhoto(null)
     } else {
       const d = await res.json()
       alert(d.error ?? 'Erro ao mover.')
@@ -339,8 +342,9 @@ function TabFotos() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {photos.map(photo => {
-              const isBusy = busy === photo.public_id
-              const to     = targetFor(photo)
+              const isBusy    = busy === photo.public_id
+              const isMoving  = movingPhoto === photo.public_id
+              const to        = targetFor(photo)
 
               return (
                 <div key={photo.public_id} className="bg-b-gray border-2 border-b-stone flex flex-col">
@@ -348,31 +352,47 @@ function TabFotos() {
                     <Image src={photo.secure_url} alt="Foto" fill className="object-cover" sizes="(max-width: 640px) 100vw, 33vw" />
                   </div>
 
-                  <div className="p-3 flex flex-col gap-2 flex-1">
-                    {otherGalleries.length > 0 && (
-                      <div>
-                        <span className="font-mono text-[10px] uppercase text-gray-500 mb-1 block">Mover para</span>
+                  <div className="p-3 flex flex-col gap-2">
+                    {/* Painel de mover — abre ao clicar em "Mover para..." */}
+                    {isMoving && otherGalleries.length > 0 && (
+                      <div className="flex flex-col gap-2">
                         <select
                           value={to}
                           onChange={e => setMoveTarget(prev => ({ ...prev, [photo.public_id]: e.target.value }))}
                           disabled={isBusy}
-                          className="w-full bg-b-dark border border-b-stone text-white font-mono text-xs px-2 py-1.5 outline-none appearance-none cursor-pointer hover:border-b-orange transition-colors disabled:opacity-40"
+                          className="w-full bg-b-dark border border-b-orange text-white font-mono text-xs px-2 py-1.5 outline-none appearance-none cursor-pointer disabled:opacity-40"
                         >
                           {otherGalleries.map(g => (
                             <option key={g.folder_slug} value={g.folder_slug}>{g.display_name}</option>
                           ))}
                         </select>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => move(photo)}
+                            disabled={isBusy || !to}
+                            className="flex-1 bg-b-orange text-b-dark font-display text-xs uppercase py-2 tracking-wider hover:opacity-90 disabled:opacity-40"
+                          >
+                            {isBusy ? '...' : '→ Confirmar'}
+                          </button>
+                          <button
+                            onClick={() => setMovingPhoto(null)}
+                            disabled={isBusy}
+                            className="px-3 border border-b-stone text-gray-500 font-mono text-xs hover:text-white disabled:opacity-40"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </div>
                     )}
 
-                    <div className="flex gap-2 mt-auto">
-                      {otherGalleries.length > 0 && (
+                    <div className="flex gap-2">
+                      {otherGalleries.length > 0 && !isMoving && (
                         <button
-                          onClick={() => move(photo)}
-                          disabled={isBusy || !to}
-                          className="flex-1 bg-b-orange text-b-dark font-display text-xs uppercase py-2 tracking-wider hover:opacity-90 disabled:opacity-40"
+                          onClick={() => setMovingPhoto(photo.public_id)}
+                          disabled={isBusy}
+                          className="flex-1 border border-b-stone text-gray-300 font-display text-xs uppercase py-2 tracking-wider hover:border-b-orange hover:text-b-orange transition-colors disabled:opacity-40"
                         >
-                          {isBusy ? '...' : '→ Mover'}
+                          Mover para...
                         </button>
                       )}
                       <button
