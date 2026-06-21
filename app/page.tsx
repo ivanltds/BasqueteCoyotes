@@ -3,50 +3,68 @@ import Image from 'next/image'
 import DynamicGallery from '@/components/DynamicGallery'
 import InstaFeed from '@/components/InstaFeed'
 import MarqueeStrip from '@/components/MarqueeStrip'
+import HeroSlideshow, { type SiteMedia } from '@/components/HeroSlideshow'
+import { getSupabasePublic } from '@/lib/supabase-server'
 import { getCloudinaryImages } from '@/lib/cloudinary'
 
-const HERO_FOLDER = process.env.CLOUDINARY_HERO_FOLDER ?? 'coyotes/hero'
+// Fallbacks (imagens fixas enquanto site_media estiver vazio)
+const HERO_FOLDER      = process.env.CLOUDINARY_HERO_FOLDER ?? 'coyotes/hero'
+const FALLBACK_COACH   = `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dqt35bpzt'}/image/upload/v1/foto-treinador.jpg`
+const FALLBACK_GEOVANI = 'https://res.cloudinary.com/dqt35bpzt/image/upload/v1775908084/nani_ha122j.jpg'
+const FALLBACK_IVAN    = 'https://res.cloudinary.com/dqt35bpzt/image/upload/v1775908084/ivan_ocqtgu.jpg'
+
+async function getSiteMedia(section: string): Promise<SiteMedia[]> {
+  const sb = getSupabasePublic()
+  const { data } = await sb
+    .from('site_media')
+    .select('id, cloudinary_url, resource_type')
+    .eq('section', section)
+    .order('sort_order', { ascending: true })
+  return data ?? []
+}
 
 export default async function Home() {
-  // Buscamos todas as imagens da pasta hero sem filtro e sem shuffle para mapear cada uma
-  const allHeroImages = await getCloudinaryImages(HERO_FOLDER, 10, { shuffle: false, skipFilter: true })
-  
-  // Busca explícita pela foto do time completo (Hero)
-  const timeCompletoImg = allHeroImages.find(img => 
-    (img.display_name && img.display_name.includes('foto-time-completo')) || 
-    img.public_id.includes('foto-time-completo')
-  )
-  const heroSrc = timeCompletoImg ? timeCompletoImg.secure_url : '/images/hero/foto-time-completo.jpg'
+  // Busca mídia configurável em paralelo
+  const [heroItems, thiagoItems, geovaniItems, ivanItems, allHeroImages] = await Promise.all([
+    getSiteMedia('hero_main'),
+    getSiteMedia('person_thiago'),
+    getSiteMedia('person_geovani'),
+    getSiteMedia('person_ivan'),
+    // Fallback: busca antiga por nome se site_media estiver vazio
+    getCloudinaryImages(HERO_FOLDER, 10, { shuffle: false, skipFilter: true }),
+  ])
 
-  // Busca explícita pela foto do treinador
-  const coachImg = allHeroImages.find(img => 
-    (img.display_name && img.display_name.includes('foto-treinador')) || 
-    img.public_id.includes('foto-treinador')
-  )
-  const coachSrc = coachImg ? coachImg.secure_url : `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dqt35bpzt'}/image/upload/v1/foto-treinador.jpg`
+  // Fallbacks para fotos de membros (enquanto admin não configurar)
+  const coachSrc   = thiagoItems[0]?.cloudinary_url  ?? (() => {
+    const img = allHeroImages.find(i => i.public_id.includes('foto-treinador'))
+    return img?.secure_url ?? FALLBACK_COACH
+  })()
+  const geovaniSrc = geovaniItems[0]?.cloudinary_url ?? (() => {
+    const img = allHeroImages.find(i => i.public_id.includes('nani'))
+    return img?.secure_url ?? FALLBACK_GEOVANI
+  })()
+  const ivanSrc    = ivanItems[0]?.cloudinary_url    ?? (() => {
+    const img = allHeroImages.find(i => i.public_id.includes('ivan'))
+    return img?.secure_url ?? FALLBACK_IVAN
+  })()
 
-  // Busca explícita equipe Marketing
-  const naniImg = allHeroImages.find(img => (img.display_name && img.display_name.includes('nani')) || img.public_id.includes('nani'))
-  const ivanImg = allHeroImages.find(img => (img.display_name && img.display_name.includes('ivan')) || img.public_id.includes('ivan'))
-  
-  const naniSrc = naniImg ? naniImg.secure_url : "https://res.cloudinary.com/dqt35bpzt/image/upload/v1775908084/nani_ha122j.jpg"
-  const ivanSrc = ivanImg ? ivanImg.secure_url : "https://res.cloudinary.com/dqt35bpzt/image/upload/v1775908084/ivan_ocqtgu.jpg"
+  // Fallback do hero (foto-time-completo) se site_media vazio
+  const heroFallbackSrc = (() => {
+    const img = allHeroImages.find(i => i.public_id.includes('foto-time-completo'))
+    return img?.secure_url ?? '/images/hero/foto-time-completo.jpg'
+  })()
+  const heroFallbackItems: SiteMedia[] = heroItems.length > 0
+    ? heroItems
+    : [{ id: 'fallback', cloudinary_url: heroFallbackSrc, resource_type: 'image' }]
 
   return (
     <main className="min-h-screen bg-b-dark text-white overflow-x-hidden">
 
       {/* ── HERO ── */}
       <section className="relative h-screen flex flex-col items-center justify-center overflow-hidden noise-overlay">
-        {/* Background image */}
+        {/* Background slideshow */}
         <div className="absolute inset-0 z-0">
-          <Image
-            src={heroSrc}
-            alt="Matilha Coyotes completa"
-            fill
-            className="object-cover object-center"
-            priority
-            quality={90}
-          />
+          <HeroSlideshow items={heroFallbackItems} />
           {/* Gradient layers para o efeito escuro com vinheta */}
           <div className="absolute inset-0 bg-gradient-to-b from-b-dark/70 via-b-dark/40 to-b-dark" />
           <div className="absolute inset-0 bg-gradient-to-r from-b-dark/50 via-transparent to-b-dark/50" />
@@ -214,7 +232,7 @@ export default async function Home() {
             <div className="group bg-b-gray border-2 border-b-stone hover:border-b-orange transition-all duration-300 overflow-hidden shadow-brutal-org">
               <div className="relative aspect-square md:aspect-[4/3] overflow-hidden">
                 <Image
-                  src={naniSrc}
+                  src={geovaniSrc}
                   alt="Geovane Nunes - Marketing e Operações"
                   fill
                   className="object-cover grayscale group-hover:grayscale-0 transition-all duration-500 group-hover:scale-105"

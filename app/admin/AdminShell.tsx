@@ -21,7 +21,16 @@ interface Gallery {
   photo_count: number
 }
 
-type Tab = 'aprovacoes' | 'fotos' | 'galerias'
+type Tab = 'aprovacoes' | 'fotos' | 'galerias' | 'midia'
+
+interface SiteMediaItem {
+  id: string
+  section: string
+  cloudinary_public_id: string
+  cloudinary_url: string
+  resource_type: string
+  sort_order: number
+}
 
 // ─── Shell principal ───────────────────────────────────────────────────────────
 
@@ -58,6 +67,7 @@ export default function AdminShell() {
           { id: 'aprovacoes', label: 'Aprovações' },
           { id: 'fotos',      label: 'Fotos'      },
           { id: 'galerias',   label: 'Galerias'   },
+          { id: 'midia',      label: 'Mídia'      },
         ] as { id: Tab; label: string }[]).map(t => (
           <button
             key={t.id}
@@ -78,6 +88,7 @@ export default function AdminShell() {
         {tab === 'aprovacoes' && <TabAprovacoes />}
         {tab === 'fotos'      && <TabFotos />}
         {tab === 'galerias'   && <TabGalerias />}
+        {tab === 'midia'      && <TabMidia />}
       </div>
     </main>
   )
@@ -413,9 +424,6 @@ function TabFotos() {
     </div>
   )
 }
-
-// ─── Aba: Galerias ────────────────────────────────────────────────────────────
-
 function TabGalerias() {
   const router = useRouter()
   const [galleries, setGalleries]     = useState<Gallery[]>([])
@@ -589,4 +597,215 @@ function TabGalerias() {
 
 function Spinner() {
   return <p className="font-mono text-gray-500 text-sm uppercase animate-pulse mt-4">Carregando...</p>
+}
+
+// ─── Aba: Mídia (Hero + Equipe) ───────────────────────────────────────────────
+
+const MEDIA_SECTIONS = [
+  { id: 'hero_main',      label: 'Hero Principal',    multi: true,  accept: 'image/*,video/*' },
+  { id: 'hero_baskferia', label: 'Hero Baskferia',    multi: true,  accept: 'image/*,video/*' },
+  { id: 'person_thiago',  label: 'Foto - Thiago',     multi: false, accept: 'image/*' },
+  { id: 'person_geovani', label: 'Foto - Geovani',    multi: false, accept: 'image/*' },
+  { id: 'person_ivan',    label: 'Foto - Ivan',       multi: false, accept: 'image/*' },
+]
+
+function TabMidia() {
+  const [activeSection, setActiveSection] = useState(MEDIA_SECTIONS[0].id)
+  const [items, setItems]                 = useState<SiteMediaItem[]>([])
+  const [loading, setLoading]             = useState(false)
+  const [uploading, setUploading]         = useState(false)
+  const [progress, setProgress]           = useState(0)
+  const [error, setError]                 = useState<string | null>(null)
+
+  const sectionMeta = MEDIA_SECTIONS.find(s => s.id === activeSection)!
+
+  const loadSection = useCallback(async (section: string) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const r = await fetch(`/api/admin/site-media?section=${section}`)
+      const d = await r.json()
+      setItems(d.media ?? [])
+    } catch {
+      setError('Erro ao carregar midia.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { loadSection(activeSection) }, [activeSection, loadSection])
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+
+    setUploading(true)
+    setProgress(0)
+    setError(null)
+
+    try {
+      const sigRes = await fetch(`/api/admin/sign-media?section=${activeSection}`)
+      if (!sigRes.ok) throw new Error('Falha ao obter assinatura')
+      const sig = await sigRes.json()
+
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('api_key', sig.api_key)
+      formData.append('timestamp', sig.timestamp)
+      formData.append('signature', sig.signature)
+      formData.append('folder', sig.folder)
+      formData.append('resource_type', sig.resource_type)
+
+      const uploadUrl = `https://api.cloudinary.com/v1_1/${sig.cloud_name}/auto/upload`
+
+      const uploadResult = await new Promise<{ secure_url: string; public_id: string; resource_type: string }>(
+        (resolve, reject) => {
+          const xhr = new XMLHttpRequest()
+          xhr.upload.onprogress = ev => {
+            if (ev.lengthComputable) setProgress(Math.round((ev.loaded / ev.total) * 90))
+          }
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(JSON.parse(xhr.responseText))
+            } else {
+              reject(new Error(`Upload falhou: ${xhr.status}`))
+            }
+          }
+          xhr.onerror = () => reject(new Error('Erro de rede no upload'))
+          xhr.open('POST', uploadUrl)
+          xhr.send(formData)
+        }
+      )
+
+      setProgress(95)
+
+      const saveRes = await fetch('/api/admin/site-media', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          section: activeSection,
+          cloudinary_public_id: uploadResult.public_id,
+          cloudinary_url: uploadResult.secure_url,
+          resource_type: uploadResult.resource_type === 'video' ? 'video' : 'image',
+        }),
+      })
+      if (!saveRes.ok) throw new Error('Falha ao salvar midia')
+
+      setProgress(100)
+      await loadSection(activeSection)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro desconhecido')
+    } finally {
+      setUploading(false)
+      setProgress(0)
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('Remover esta midia?')) return
+    const r = await fetch(`/api/admin/site-media/${id}`, { method: 'DELETE' })
+    if (r.ok) setItems(prev => prev.filter(i => i.id !== id))
+    else setError('Erro ao remover.')
+  }
+
+  return (
+    <div>
+      <div className="mb-8">
+        <h2 className="font-display text-3xl uppercase text-white mb-1">Midia do Site</h2>
+        <p className="font-mono text-xs text-gray-500 uppercase tracking-wider">
+          Configure imagens e videos das secoes hero e da equipe
+        </p>
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-8">
+        {MEDIA_SECTIONS.map(s => (
+          <button
+            key={s.id}
+            onClick={() => setActiveSection(s.id)}
+            className={`font-mono text-xs uppercase px-4 py-2 border transition-all ${
+              activeSection === s.id
+                ? 'border-b-orange text-b-orange bg-b-orange/10'
+                : 'border-b-stone text-gray-400 hover:border-white hover:text-white'
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h3 className="font-display text-xl uppercase text-white">{sectionMeta.label}</h3>
+          {!sectionMeta.multi && (
+            <p className="font-mono text-xs text-b-orange mt-1">
+              Secao de foto unica - novo upload substitui o anterior
+            </p>
+          )}
+        </div>
+        <label className={`cursor-pointer font-display text-sm uppercase px-6 py-3 tracking-wider transition-all ${
+          uploading
+            ? 'bg-b-stone/40 text-gray-500 cursor-not-allowed'
+            : 'bg-b-orange text-b-dark hover:opacity-90 shadow-brutal hover:shadow-none hover:translate-x-1 hover:translate-y-1'
+        }`}>
+          {uploading ? `Enviando ${progress}%` : '+ Adicionar'}
+          <input type="file" accept={sectionMeta.accept} className="hidden" disabled={uploading} onChange={handleUpload} />
+        </label>
+      </div>
+
+      {uploading && (
+        <div className="mb-6 h-1 bg-b-stone rounded overflow-hidden">
+          <div className="h-full bg-b-orange transition-all duration-300" style={{ width: `${progress}%` }} />
+        </div>
+      )}
+
+      {error && <p className="mb-4 font-mono text-xs text-red-400 uppercase">{error}</p>}
+
+      {loading ? (
+        <Spinner />
+      ) : items.length === 0 ? (
+        <div className="border border-dashed border-b-stone rounded p-12 text-center">
+          <p className="font-mono text-gray-600 text-sm uppercase">Nenhuma midia configurada</p>
+          <p className="font-mono text-gray-700 text-xs mt-2">Clique em + Adicionar para fazer upload</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {items.map((item, i) => (
+            <div key={item.id} className="relative group border border-b-stone bg-b-gray overflow-hidden">
+              <div className="aspect-video relative bg-black">
+                {item.resource_type === 'video' ? (
+                  <video
+                    src={item.cloudinary_url}
+                    className="w-full h-full object-cover opacity-80"
+                    muted
+                    playsInline
+                    onMouseEnter={e => (e.currentTarget as HTMLVideoElement).play()}
+                    onMouseLeave={e => { const v = e.currentTarget as HTMLVideoElement; v.pause(); v.currentTime = 0 }}
+                  />
+                ) : (
+                  <img src={item.cloudinary_url} alt="" className="w-full h-full object-cover" />
+                )}
+                <span className="absolute top-2 left-2 font-mono text-[10px] uppercase px-2 py-0.5 bg-black/70 text-gray-300">
+                  {item.resource_type === 'video' ? 'video' : 'imagem'}
+                </span>
+                {sectionMeta.multi && (
+                  <span className="absolute top-2 right-2 font-mono text-[10px] px-2 py-0.5 bg-b-orange/90 text-b-dark font-bold">
+                    #{i + 1}
+                  </span>
+                )}
+              </div>
+              <div className="p-2 flex justify-end">
+                <button
+                  onClick={() => handleDelete(item.id)}
+                  className="font-mono text-[11px] uppercase text-red-500 hover:text-red-300 px-2 py-1 border border-red-900/40 hover:border-red-500 transition-all"
+                >
+                  X Remover
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }

@@ -3,6 +3,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import InstaFeed from '@/components/InstaFeed'
 import MarqueeStrip from '@/components/MarqueeStrip'
+import HeroSlideshow, { type SiteMedia } from '@/components/HeroSlideshow'
+import { getSupabasePublic } from '@/lib/supabase-server'
 
 export const metadata: Metadata = {
   title: 'Baskferia 2026 | O Maior Evento de Streetball da Zona Oeste de São Paulo',
@@ -62,7 +64,15 @@ const jsonLd = {
   image: 'https://basquete-coyotes.vercel.app/images/logos/logo-baskferia.png',
 }
 
-export default function Baskferia() {
+export default async function Baskferia() {
+  const sb = getSupabasePublic()
+  const { data } = await sb
+    .from('site_media')
+    .select('id, cloudinary_url, resource_type')
+    .eq('section', 'hero_baskferia')
+    .order('sort_order', { ascending: true })
+  const baskferiaHeroItems: SiteMedia[] = data ?? []
+
   return (
     <main className="min-h-screen bg-b-dark text-white overflow-x-hidden">
       <script
@@ -72,9 +82,13 @@ export default function Baskferia() {
 
       {/* ── HERO BASKFERIA ── */}
       <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden noise-overlay">
-        {/* Fundo textura asfalto */}
+        {/* Fundo: slideshow configurável ou textura asfalto */}
         <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-[url('/images/textures/asphalt.png')] bg-cover bg-center opacity-20" />
+          {baskferiaHeroItems.length > 0 ? (
+            <HeroSlideshow items={baskferiaHeroItems} />
+          ) : (
+            <div className="absolute inset-0 bg-[url('/images/textures/asphalt.png')] bg-cover bg-center opacity-20" />
+          )}
           <div className="absolute inset-0 bg-gradient-to-b from-b-dark/80 via-b-dark/50 to-b-dark" />
         </div>
 
