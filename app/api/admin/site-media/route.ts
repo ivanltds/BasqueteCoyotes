@@ -3,7 +3,7 @@ import { isAuthenticated } from '@/lib/admin-auth'
 import { getSupabaseAdmin, getSupabasePublic } from '@/lib/supabase-server'
 
 const VALID_SECTIONS = [
-  'hero_main', 'hero_baskferia',
+  'hero_main', 'hero_main_mobile', 'hero_baskferia',
   'person_thiago', 'person_ivan', 'person_geovani',
 ]
 

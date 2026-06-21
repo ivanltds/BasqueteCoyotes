@@ -4,11 +4,12 @@ import { isAuthenticated } from '@/lib/admin-auth'
 
 // Mapeamento seção → pasta Cloudinary
 const SECTION_FOLDERS: Record<string, string> = {
-  hero_main:       'coyotes/hero/main',
-  hero_baskferia:  'coyotes/hero/baskferia',
-  person_thiago:   'coyotes/team/thiago',
-  person_ivan:     'coyotes/team/ivan',
-  person_geovani:  'coyotes/team/geovani',
+  hero_main:        'coyotes/hero/main',
+  hero_main_mobile: 'coyotes/hero/main-mobile',
+  hero_baskferia:   'coyotes/hero/baskferia',
+  person_thiago:    'coyotes/team/thiago',
+  person_ivan:      'coyotes/team/ivan',
+  person_geovani:   'coyotes/team/geovani',
 }
 
 export async function GET(req: NextRequest) {

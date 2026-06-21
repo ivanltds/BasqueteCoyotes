@@ -27,16 +27,16 @@ async function getSiteMedia(section: string): Promise<SiteMedia[]> {
 
 export default async function Home() {
   // Busca mídia configurável em paralelo
-  const [heroItems, thiagoItems, geovaniItems, ivanItems, allHeroImages] = await Promise.all([
+  const [heroDesktopRaw, heroMobileRaw, thiagoItems, geovaniItems, ivanItems, allHeroImages] = await Promise.all([
     getSiteMedia('hero_main'),
+    getSiteMedia('hero_main_mobile'),
     getSiteMedia('person_thiago'),
     getSiteMedia('person_geovani'),
     getSiteMedia('person_ivan'),
-    // Fallback: busca antiga por nome se site_media estiver vazio
     getCloudinaryImages(HERO_FOLDER, 10, { shuffle: false, skipFilter: true }),
   ])
 
-  // Fallbacks para fotos de membros (enquanto admin não configurar)
+  // Fallbacks para fotos de membros
   const coachSrc   = thiagoItems[0]?.cloudinary_url  ?? (() => {
     const img = allHeroImages.find(i => i.public_id.includes('foto-treinador'))
     return img?.secure_url ?? FALLBACK_COACH
@@ -50,27 +50,35 @@ export default async function Home() {
     return img?.secure_url ?? FALLBACK_IVAN
   })()
 
-  // Fallback do hero (foto-time-completo) se site_media vazio
+  // Fallback hero quando site_media vazio
   const heroFallbackSrc = (() => {
     const img = allHeroImages.find(i => i.public_id.includes('foto-time-completo'))
     return img?.secure_url ?? '/images/hero/foto-time-completo.jpg'
   })()
-  const heroFallbackItems: SiteMedia[] = heroItems.length > 0
-    ? heroItems
-    : [{ id: 'fallback', cloudinary_url: heroFallbackSrc, resource_type: 'image' }]
+  const heroFallback: SiteMedia[] = [{ id: 'fallback', cloudinary_url: heroFallbackSrc, resource_type: 'image' }]
+
+  // Desktop: fotos sempre aparecem + vídeos horizontais
+  // Mobile: fotos sempre aparecem + vídeos verticais
+  // Se o slot mobile estiver vazio, usa o desktop como fallback
+  const heroDesktopItems = heroDesktopRaw.length > 0 ? heroDesktopRaw : heroFallback
+  const heroMobileItems  = heroMobileRaw.length  > 0 ? heroMobileRaw  : heroDesktopItems
 
   return (
     <main className="min-h-screen bg-b-dark text-white overflow-x-hidden">
 
       {/* ── HERO ── */}
       <section className="relative h-screen flex flex-col items-center justify-center overflow-hidden noise-overlay">
-        {/* Background slideshow */}
-        <div className="absolute inset-0 z-0">
-          <HeroSlideshow items={heroFallbackItems} />
-          {/* Gradient layers para o efeito escuro com vinheta */}
-          <div className="absolute inset-0 bg-gradient-to-b from-b-dark/70 via-b-dark/40 to-b-dark" />
-          <div className="absolute inset-0 bg-gradient-to-r from-b-dark/50 via-transparent to-b-dark/50" />
+        {/* Background slideshow — desktop (md+) */}
+        <div className="hidden md:block absolute inset-0 z-0">
+          <HeroSlideshow items={heroDesktopItems} />
         </div>
+        {/* Background slideshow — mobile */}
+        <div className="block md:hidden absolute inset-0 z-0">
+          <HeroSlideshow items={heroMobileItems} />
+        </div>
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 z-[1] bg-gradient-to-b from-b-dark/70 via-b-dark/40 to-b-dark pointer-events-none" />
+        <div className="absolute inset-0 z-[1] bg-gradient-to-r from-b-dark/50 via-transparent to-b-dark/50 pointer-events-none" />
 
         {/* Conteúdo hero */}
         <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-4xl mx-auto">

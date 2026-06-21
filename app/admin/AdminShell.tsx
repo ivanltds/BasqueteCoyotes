@@ -602,11 +602,12 @@ function Spinner() {
 // ─── Aba: Mídia (Hero + Equipe) ───────────────────────────────────────────────
 
 const MEDIA_SECTIONS = [
-  { id: 'hero_main',      label: 'Hero Principal',    multi: true,  accept: 'image/*,video/*' },
-  { id: 'hero_baskferia', label: 'Hero Baskferia',    multi: true,  accept: 'image/*,video/*' },
-  { id: 'person_thiago',  label: 'Foto - Thiago',     multi: false, accept: 'image/*' },
-  { id: 'person_geovani', label: 'Foto - Geovani',    multi: false, accept: 'image/*' },
-  { id: 'person_ivan',    label: 'Foto - Ivan',       multi: false, accept: 'image/*' },
+  { id: 'hero_main',        label: 'Hero Desktop',      multi: true,  accept: 'image/*,video/*', hint: 'Videos horizontais + fotos (telas grandes)' },
+  { id: 'hero_main_mobile', label: 'Hero Mobile',       multi: true,  accept: 'image/*,video/*', hint: 'Videos verticais + fotos (celulares)' },
+  { id: 'hero_baskferia',   label: 'Hero Baskferia',    multi: true,  accept: 'image/*,video/*', hint: '' },
+  { id: 'person_thiago',    label: 'Foto - Thiago',     multi: false, accept: 'image/*',         hint: '' },
+  { id: 'person_geovani',   label: 'Foto - Geovani',    multi: false, accept: 'image/*',         hint: '' },
+  { id: 'person_ivan',      label: 'Foto - Ivan',       multi: false, accept: 'image/*',         hint: '' },
 ]
 
 function TabMidia() {
@@ -737,6 +738,9 @@ function TabMidia() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h3 className="font-display text-xl uppercase text-white">{sectionMeta.label}</h3>
+          {sectionMeta.hint && (
+            <p className="font-mono text-xs text-b-neon mt-1">{sectionMeta.hint}</p>
+          )}
           {!sectionMeta.multi && (
             <p className="font-mono text-xs text-b-orange mt-1">
               Secao de foto unica - novo upload substitui o anterior

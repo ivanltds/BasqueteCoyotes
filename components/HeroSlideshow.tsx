@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 
 export interface SiteMedia {
@@ -11,33 +11,45 @@ export interface SiteMedia {
 
 interface Props {
   items: SiteMedia[]
-  interval?: number  // ms entre slides (default 6000)
+  imageInterval?: number  // ms para imagens (default 6000)
   className?: string
 }
 
 /**
  * Slideshow para hero com suporte a imagens e vídeos.
- * Cicla automaticamente com fade. Se houver 1 item apenas, exibe estático.
+ * - Imagens: avançam após imageInterval ms
+ * - Vídeos: rodam completos (onEnded) antes de avançar
+ * - 1 item: exibe estático (vídeo em loop)
  */
-export default function HeroSlideshow({ items, interval = 6000, className = '' }: Props) {
+export default function HeroSlideshow({ items, imageInterval = 6000, className = '' }: Props) {
   const [idx, setIdx] = useState(0)
   const [visible, setVisible] = useState(true)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const advance = useCallback(() => {
+    if (items.length <= 1) return
+    setVisible(false)
+    setTimeout(() => {
+      setIdx(prev => (prev + 1) % items.length)
+      setVisible(true)
+    }, 500)
+  }, [items.length])
+
+  // Para imagens: timer fixo. Vídeos usam onEnded.
   useEffect(() => {
     if (items.length <= 1) return
-    const timer = setInterval(() => {
-      setVisible(false)
-      setTimeout(() => {
-        setIdx(prev => (prev + 1) % items.length)
-        setVisible(true)
-      }, 500) // duração do fade-out
-    }, interval)
-    return () => clearInterval(timer)
-  }, [items.length, interval])
+    if (items[idx]?.resource_type !== 'video') {
+      timerRef.current = setTimeout(advance, imageInterval)
+    }
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [idx, items, imageInterval, advance])
 
   if (items.length === 0) return null
 
   const current = items[idx]
+  const isOnly = items.length === 1
 
   return (
     <div className={`absolute inset-0 ${className}`}>
@@ -51,8 +63,9 @@ export default function HeroSlideshow({ items, interval = 6000, className = '' }
             src={current.cloudinary_url}
             autoPlay
             muted
-            loop
+            loop={isOnly}
             playsInline
+            onEnded={isOnly ? undefined : advance}
             className="w-full h-full object-cover"
           />
         ) : (
