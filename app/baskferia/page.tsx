@@ -7,6 +7,7 @@ import InstaFeed from '@/components/InstaFeed'
 import MarqueeStrip from '@/components/MarqueeStrip'
 import HeroSlideshow, { type SiteMedia } from '@/components/HeroSlideshow'
 import { getSupabasePublic } from '@/lib/supabase-server'
+import AudioPlayer from '@/components/AudioPlayer'
 
 export const metadata: Metadata = {
   title: 'Baskferia 2026 | O Maior Evento de Streetball da Zona Oeste de São Paulo',
@@ -74,6 +75,13 @@ export default async function Baskferia() {
     .eq('section', 'hero_baskferia')
     .order('sort_order', { ascending: true })
   const baskferiaHeroItems: SiteMedia[] = data ?? []
+
+  const { data: audioData } = await sb
+    .from('site_audio')
+    .select('id, name, cloudinary_url')
+    .eq('section', 'baskferia')
+    .order('sort_order', { ascending: true })
+  const audioTracks = audioData ?? []
 
   return (
     <main className="min-h-screen bg-b-dark text-white overflow-x-hidden">
@@ -290,6 +298,7 @@ export default async function Baskferia() {
         </div>
       </section>
 
+      <AudioPlayer tracks={audioTracks} />
     </main>
   )
 }

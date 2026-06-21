@@ -6,6 +6,7 @@ import DynamicGallery from '@/components/DynamicGallery'
 import InstaFeed from '@/components/InstaFeed'
 import MarqueeStrip from '@/components/MarqueeStrip'
 import HeroSlideshow, { type SiteMedia } from '@/components/HeroSlideshow'
+import AudioPlayer from '@/components/AudioPlayer'
 import { getSupabasePublic } from '@/lib/supabase-server'
 import { getCloudinaryImages } from '@/lib/cloudinary'
 
@@ -14,6 +15,16 @@ const HERO_FOLDER      = process.env.CLOUDINARY_HERO_FOLDER ?? 'coyotes/hero'
 const FALLBACK_COACH   = `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dqt35bpzt'}/image/upload/v1/foto-treinador.jpg`
 const FALLBACK_GEOVANI = 'https://res.cloudinary.com/dqt35bpzt/image/upload/v1775908084/nani_ha122j.jpg'
 const FALLBACK_IVAN    = 'https://res.cloudinary.com/dqt35bpzt/image/upload/v1775908084/ivan_ocqtgu.jpg'
+
+async function getAudioTracks(section: string) {
+  const sb = getSupabasePublic()
+  const { data } = await sb
+    .from('site_audio')
+    .select('id, name, cloudinary_url')
+    .eq('section', section)
+    .order('sort_order', { ascending: true })
+  return data ?? []
+}
 
 async function getSiteMedia(section: string): Promise<SiteMedia[]> {
   const sb = getSupabasePublic()
@@ -27,13 +38,14 @@ async function getSiteMedia(section: string): Promise<SiteMedia[]> {
 
 export default async function Home() {
   // Busca mídia configurável em paralelo
-  const [heroDesktopRaw, heroMobileRaw, thiagoItems, geovaniItems, ivanItems, allHeroImages] = await Promise.all([
+  const [heroDesktopRaw, heroMobileRaw, thiagoItems, geovaniItems, ivanItems, allHeroImages, audioTracks] = await Promise.all([
     getSiteMedia('hero_main'),
     getSiteMedia('hero_main_mobile'),
     getSiteMedia('person_thiago'),
     getSiteMedia('person_geovani'),
     getSiteMedia('person_ivan'),
     getCloudinaryImages(HERO_FOLDER, 10, { shuffle: false, skipFilter: true }),
+    getAudioTracks('homepage'),
   ])
 
   // Fallbacks para fotos de membros
@@ -383,6 +395,7 @@ export default async function Home() {
         <DynamicGallery />
       </section>
 
+      <AudioPlayer tracks={audioTracks} />
     </main>
   )
 }

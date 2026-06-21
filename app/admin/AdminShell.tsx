@@ -21,7 +21,7 @@ interface Gallery {
   photo_count: number
 }
 
-type Tab = 'aprovacoes' | 'fotos' | 'galerias' | 'midia'
+type Tab = 'aprovacoes' | 'fotos' | 'galerias' | 'midia' | 'audio'
 
 interface SiteMediaItem {
   id: string
@@ -68,6 +68,7 @@ export default function AdminShell() {
           { id: 'fotos',      label: 'Fotos'      },
           { id: 'galerias',   label: 'Galerias'   },
           { id: 'midia',      label: 'Mídia'      },
+          { id: 'audio',      label: 'Áudio'      },
         ] as { id: Tab; label: string }[]).map(t => (
           <button
             key={t.id}
@@ -89,6 +90,7 @@ export default function AdminShell() {
         {tab === 'fotos'      && <TabFotos />}
         {tab === 'galerias'   && <TabGalerias />}
         {tab === 'midia'      && <TabMidia />}
+        {tab === 'audio'      && <TabAudio />}
       </div>
     </main>
   )
@@ -809,6 +811,271 @@ function TabMidia() {
             </div>
           ))}
         </div>
+      )}
+    </div>
+  )
+}
+
+// ─── TabAudio ─────────────────────────────────────────────────────────────────
+
+interface AudioTrack {
+  id: string
+  name: string
+  cloudinary_url: string
+  sort_order: number
+}
+
+interface AudioSection {
+  id: 'homepage' | 'baskferia'
+  label: string
+}
+
+const AUDIO_SECTIONS: AudioSection[] = [
+  { id: 'homepage',  label: 'Playlist — Página Principal' },
+  { id: 'baskferia', label: 'Playlist — Baskferia' },
+]
+
+function TabAudio() {
+  const [tracks, setTracks]     = useState<Record<string, AudioTrack[]>>({ homepage: [], baskferia: [] })
+  const [loading, setLoading]   = useState(true)
+  const [uploading, setUploading] = useState<Record<string, boolean>>({})
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState('')
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const [hp, bk] = await Promise.all([
+      fetch('/api/admin/site-audio?section=homepage').then(r => r.json()),
+      fetch('/api/admin/site-audio?section=baskferia').then(r => r.json()),
+    ])
+    setTracks({ homepage: hp.tracks ?? [], baskferia: bk.tracks ?? [] })
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  async function handleUpload(section: 'homepage' | 'baskferia', file: File, name: string) {
+    setUploading(u => ({ ...u, [section]: true }))
+    try {
+      const sigRes = await fetch(`/api/admin/sign-audio?section=${section}`)
+      const sig    = await sigRes.json()
+      if (!sigRes.ok) throw new Error(sig.error)
+
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('api_key',   sig.api_key)
+      fd.append('timestamp', sig.timestamp)
+      fd.append('signature', sig.signature)
+      fd.append('folder',    sig.folder)
+
+      const up = await fetch(
+        `https://api.cloudinary.com/v1_1/${sig.cloud_name}/auto/upload`,
+        { method: 'POST', body: fd }
+      )
+      const upData = await up.json()
+      if (!up.ok) throw new Error(upData.error?.message ?? 'Upload falhou')
+
+      await fetch('/api/admin/site-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          section,
+          name,
+          cloudinary_public_id: upData.public_id,
+          cloudinary_url:       upData.secure_url,
+        }),
+      })
+      await load()
+    } catch (e) {
+      alert('Erro no upload: ' + (e as Error).message)
+    } finally {
+      setUploading(u => ({ ...u, [section]: false }))
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('Remover esta faixa?')) return
+    await fetch(`/api/admin/site-audio/${id}`, { method: 'DELETE' })
+    await load()
+  }
+
+  async function handleRename(id: string, name: string) {
+    await fetch(`/api/admin/site-audio/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    })
+    setEditingId(null)
+    await load()
+  }
+
+  async function handleMove(section: string, id: string, direction: 'up' | 'down') {
+    const list = [...tracks[section]]
+    const i    = list.findIndex(t => t.id === id)
+    const j    = direction === 'up' ? i - 1 : i + 1
+    if (j < 0 || j >= list.length) return
+
+    const tmp = list[i]; list[i] = list[j]; list[j] = tmp
+
+    await Promise.all(
+      list.map((t, idx) =>
+        fetch(`/api/admin/site-audio/${t.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sort_order: idx }),
+        })
+      )
+    )
+    await load()
+  }
+
+  if (loading) return <Spinner />
+
+  return (
+    <div className="space-y-12">
+      {AUDIO_SECTIONS.map(sec => {
+        const list = tracks[sec.id] ?? []
+        return (
+          <div key={sec.id} className="bg-b-gray border border-b-stone/30 p-6">
+            <h3 className="font-display text-2xl uppercase text-white mb-1">{sec.label}</h3>
+            <p className="font-mono text-xs text-gray-500 mb-6">{list.length} faixa{list.length !== 1 ? 's' : ''}</p>
+
+            {/* Lista de faixas */}
+            {list.length > 0 && (
+              <div className="space-y-2 mb-6">
+                {list.map((track, i) => (
+                  <div key={track.id} className="flex items-center gap-3 bg-b-dark border border-b-stone/20 px-4 py-3">
+                    <span className="font-mono text-xs text-gray-600 w-5 text-right">{i + 1}</span>
+
+                    {/* Reordenar */}
+                    <div className="flex flex-col gap-0.5">
+                      <button
+                        onClick={() => handleMove(sec.id, track.id, 'up')}
+                        disabled={i === 0}
+                        className="text-gray-600 hover:text-white disabled:opacity-20 text-xs leading-none"
+                      >▲</button>
+                      <button
+                        onClick={() => handleMove(sec.id, track.id, 'down')}
+                        disabled={i === list.length - 1}
+                        className="text-gray-600 hover:text-white disabled:opacity-20 text-xs leading-none"
+                      >▼</button>
+                    </div>
+
+                    {/* Nome (editável) */}
+                    {editingId === track.id ? (
+                      <div className="flex-1 flex gap-2">
+                        <input
+                          value={editingName}
+                          onChange={e => setEditingName(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') handleRename(track.id, editingName)
+                            if (e.key === 'Escape') setEditingId(null)
+                          }}
+                          className="flex-1 bg-b-stone/20 border border-b-stone px-2 py-1 font-mono text-sm text-white focus:outline-none focus:border-b-orange"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => handleRename(track.id, editingName)}
+                          className="font-mono text-xs text-b-neon px-2 py-1 border border-b-neon/40 hover:border-b-neon"
+                        >OK</button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="font-mono text-xs text-gray-500 px-2 py-1"
+                        >✕</button>
+                      </div>
+                    ) : (
+                      <span
+                        className="flex-1 font-body text-white truncate cursor-pointer hover:text-b-orange"
+                        onClick={() => { setEditingId(track.id); setEditingName(track.name) }}
+                        title="Clique para renomear"
+                      >
+                        {track.name}
+                      </span>
+                    )}
+
+                    {/* Preview áudio */}
+                    <audio src={track.cloudinary_url} controls className="h-7 w-40 opacity-70" />
+
+                    {/* Remover */}
+                    <button
+                      onClick={() => handleDelete(track.id)}
+                      className="font-mono text-[11px] uppercase text-red-500 hover:text-red-300 px-2 py-1 border border-red-900/40 hover:border-red-500 transition-all shrink-0"
+                    >
+                      ✕ Remover
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Upload */}
+            <UploadAudioButton
+              section={sec.id}
+              uploading={!!uploading[sec.id]}
+              onUpload={handleUpload}
+            />
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function UploadAudioButton({
+  section,
+  uploading,
+  onUpload,
+}: {
+  section: 'homepage' | 'baskferia'
+  uploading: boolean
+  onUpload: (section: 'homepage' | 'baskferia', file: File, name: string) => void
+}) {
+  const [name, setName] = useState('')
+  const [file, setFile] = useState<File | null>(null)
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]
+    if (!f) return
+    setFile(f)
+    if (!name) setName(f.name.replace(/\.[^/.]+$/, ''))
+  }
+
+  function handleSubmit() {
+    if (!file || !name.trim()) return
+    onUpload(section, file, name.trim())
+    setFile(null)
+    setName('')
+  }
+
+  return (
+    <div className="border border-dashed border-b-stone/40 p-4 space-y-3">
+      <p className="font-mono text-xs text-gray-500 uppercase tracking-widest">Adicionar faixa</p>
+      <div className="flex flex-col sm:flex-row gap-3">
+        <input
+          type="file"
+          accept="audio/*,.mp3,.wav,.ogg,.flac"
+          onChange={handleFile}
+          className="font-mono text-xs text-gray-400 file:bg-b-stone/30 file:border-0 file:text-white file:font-mono file:text-xs file:px-3 file:py-1 file:mr-3 file:cursor-pointer"
+        />
+        <input
+          type="text"
+          placeholder="Nome da faixa"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          className="flex-1 bg-b-stone/20 border border-b-stone px-3 py-1.5 font-mono text-sm text-white placeholder-gray-600 focus:outline-none focus:border-b-orange"
+        />
+        <button
+          onClick={handleSubmit}
+          disabled={!file || !name.trim() || uploading}
+          className="font-display uppercase text-sm px-4 py-1.5 bg-b-neon text-b-dark disabled:opacity-40 disabled:cursor-not-allowed hover:bg-b-neon/80 transition-all shrink-0"
+        >
+          {uploading ? 'Enviando…' : 'Enviar'}
+        </button>
+      </div>
+      {file && (
+        <p className="font-mono text-xs text-gray-500">
+          Arquivo: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+        </p>
       )}
     </div>
   )
