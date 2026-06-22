@@ -21,7 +21,7 @@ interface Gallery {
   photo_count: number
 }
 
-type Tab = 'aprovacoes' | 'fotos' | 'galerias' | 'midia' | 'audio'
+type Tab = 'aprovacoes' | 'fotos' | 'galerias' | 'midia' | 'audio' | 'noticias'
 
 interface SiteMediaItem {
   id: string
@@ -69,6 +69,7 @@ export default function AdminShell() {
           { id: 'galerias',   label: 'Galerias'   },
           { id: 'midia',      label: 'Mídia'      },
           { id: 'audio',      label: 'Áudio'      },
+          { id: 'noticias',   label: 'Notícias'   },
         ] as { id: Tab; label: string }[]).map(t => (
           <button
             key={t.id}
@@ -91,6 +92,7 @@ export default function AdminShell() {
         {tab === 'galerias'   && <TabGalerias />}
         {tab === 'midia'      && <TabMidia />}
         {tab === 'audio'      && <TabAudio />}
+        {tab === 'noticias'  && <TabNoticias />}
       </div>
     </main>
   )
@@ -1076,6 +1078,329 @@ function UploadAudioButton({
         <p className="font-mono text-xs text-gray-500">
           Arquivo: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
         </p>
+      )}
+    </div>
+  )
+}
+
+// ─── TabNoticias ──────────────────────────────────────────────────────────────
+
+interface NewsItem {
+  id: string
+  title: string
+  slug: string
+  excerpt: string | null
+  cover_url: string | null
+  published: boolean
+  published_at: string | null
+  created_at: string
+}
+
+interface NewsForm {
+  title: string
+  slug: string
+  excerpt: string
+  content: string
+  cover_url: string
+  cover_public_id: string
+  published: boolean
+}
+
+const EMPTY_FORM: NewsForm = {
+  title: '', slug: '', excerpt: '', content: '',
+  cover_url: '', cover_public_id: '', published: false,
+}
+
+function slugify(str: string) {
+  return str
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+}
+
+function TabNoticias() {
+  const [news, setNews]             = useState<NewsItem[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [view, setView]             = useState<'list' | 'form'>('list')
+  const [editId, setEditId]         = useState<string | null>(null)
+  const [form, setForm]             = useState<NewsForm>(EMPTY_FORM)
+  const [saving, setSaving]         = useState(false)
+  const [uploadingCover, setUploadingCover] = useState(false)
+  const [homeCount, setHomeCount]   = useState(3)
+  const [savingCount, setSavingCount] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const [newsRes, configRes] = await Promise.all([
+      fetch('/api/admin/news'),
+      fetch('/api/admin/site-config'),
+    ])
+    const { news: n } = await newsRes.json()
+    const { config }  = await configRes.json()
+    setNews(n ?? [])
+    setHomeCount(parseInt(config?.home_news_count ?? '3', 10))
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  function openNew() {
+    setEditId(null)
+    setForm(EMPTY_FORM)
+    setView('form')
+  }
+
+  function openEdit(item: NewsItem & { content?: string; excerpt?: string | null }) {
+    setEditId(item.id)
+    setForm({
+      title:            item.title,
+      slug:             item.slug,
+      excerpt:          item.excerpt ?? '',
+      content:          (item as NewsItem & { content?: string }).content ?? '',
+      cover_url:        item.cover_url ?? '',
+      cover_public_id:  '',
+      published:        item.published,
+    })
+    setView('form')
+  }
+
+  async function loadFull(id: string) {
+    const res  = await fetch(`/api/admin/news`)
+    // Fetch full content via admin list (all fields)
+    const full = await fetch('/api/admin/news').then(r => r.json())
+    const item = (full.news ?? []).find((n: NewsItem & { content?: string }) => n.id === id)
+    if (item) openEdit(item)
+  }
+
+  function setField<K extends keyof NewsForm>(key: K, value: NewsForm[K]) {
+    setForm(f => {
+      const next = { ...f, [key]: value }
+      if (key === 'title' && !editId) {
+        next.slug = slugify(value as string)
+      }
+      return next
+    })
+  }
+
+  async function handleCoverUpload(file: File) {
+    setUploadingCover(true)
+    try {
+      const sigRes = await fetch('/api/admin/sign-media?section=hero_main')
+      const sig    = await sigRes.json()
+
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('api_key',   sig.api_key)
+      fd.append('timestamp', sig.timestamp)
+      fd.append('signature', sig.signature)
+      fd.append('folder',    'coyotes/news')
+
+      const up     = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloud_name}/image/upload`, { method: 'POST', body: fd })
+      const upData = await up.json()
+      if (!up.ok) throw new Error(upData.error?.message ?? 'Upload falhou')
+
+      setForm(f => ({ ...f, cover_url: upData.secure_url, cover_public_id: upData.public_id }))
+    } catch (e) {
+      alert('Erro no upload: ' + (e as Error).message)
+    } finally {
+      setUploadingCover(false)
+    }
+  }
+
+  async function handleSave() {
+    if (!form.title || !form.slug) { alert('Título e slug são obrigatórios.'); return }
+    setSaving(true)
+    try {
+      const url    = editId ? `/api/admin/news/${editId}` : '/api/admin/news'
+      const method = editId ? 'PATCH' : 'POST'
+      const res    = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
+      setView('list')
+      await load()
+    } catch (e) {
+      alert('Erro ao salvar: ' + (e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete(id: string, title: string) {
+    if (!confirm(`Excluir "${title}"?`)) return
+    await fetch(`/api/admin/news/${id}`, { method: 'DELETE' })
+    await load()
+  }
+
+  async function handleTogglePublish(item: NewsItem) {
+    await fetch(`/api/admin/news/${item.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ published: !item.published }),
+    })
+    await load()
+  }
+
+  async function handleSaveCount() {
+    setSavingCount(true)
+    await fetch('/api/admin/site-config', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ home_news_count: String(homeCount) }),
+    })
+    setSavingCount(false)
+  }
+
+  if (loading) return <Spinner />
+
+  // ── Formulário de criação/edição ──────────────────────────────────────────
+  if (view === 'form') {
+    return (
+      <div className="max-w-3xl space-y-6">
+        <div className="flex items-center justify-between">
+          <h3 className="font-display text-2xl uppercase text-white">
+            {editId ? 'Editar Notícia' : 'Nova Notícia'}
+          </h3>
+          <button onClick={() => setView('list')}
+            className="font-mono text-xs text-gray-500 hover:text-white transition-colors">
+            ← Voltar
+          </button>
+        </div>
+
+        {/* Título */}
+        <div>
+          <label className="font-mono text-xs text-gray-500 uppercase tracking-widest block mb-1">Título *</label>
+          <input value={form.title} onChange={e => setField('title', e.target.value)}
+            className="w-full bg-b-stone/20 border border-b-stone px-3 py-2 font-body text-white focus:outline-none focus:border-b-orange" />
+        </div>
+
+        {/* Slug */}
+        <div>
+          <label className="font-mono text-xs text-gray-500 uppercase tracking-widest block mb-1">Slug (URL) *</label>
+          <input value={form.slug} onChange={e => setField('slug', e.target.value)}
+            className="w-full bg-b-stone/20 border border-b-stone px-3 py-2 font-mono text-sm text-b-neon focus:outline-none focus:border-b-orange" />
+          <p className="font-mono text-[10px] text-gray-600 mt-1">/noticias/{form.slug || '...'}</p>
+        </div>
+
+        {/* Excerpt */}
+        <div>
+          <label className="font-mono text-xs text-gray-500 uppercase tracking-widest block mb-1">Resumo (opcional)</label>
+          <textarea value={form.excerpt} onChange={e => setField('excerpt', e.target.value)} rows={2}
+            className="w-full bg-b-stone/20 border border-b-stone px-3 py-2 font-body text-white focus:outline-none focus:border-b-orange resize-none" />
+        </div>
+
+        {/* Capa */}
+        <div>
+          <label className="font-mono text-xs text-gray-500 uppercase tracking-widest block mb-2">Imagem de Capa</label>
+          {form.cover_url && (
+            <img src={form.cover_url} alt="capa" className="w-48 h-28 object-cover mb-3 border border-b-stone/30" />
+          )}
+          <input type="file" accept="image/*"
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleCoverUpload(f) }}
+            className="font-mono text-xs text-gray-400 file:bg-b-stone/30 file:border-0 file:text-white file:font-mono file:text-xs file:px-3 file:py-1 file:mr-3 file:cursor-pointer" />
+          {uploadingCover && <span className="font-mono text-xs text-b-neon ml-3">Enviando…</span>}
+        </div>
+
+        {/* Conteúdo Markdown */}
+        <div>
+          <label className="font-mono text-xs text-gray-500 uppercase tracking-widest block mb-1">
+            Conteúdo (Markdown)
+          </label>
+          <textarea value={form.content} onChange={e => setField('content', e.target.value)} rows={16}
+            placeholder="# Título&#10;&#10;Escreva o conteúdo em Markdown..."
+            className="w-full bg-b-stone/20 border border-b-stone px-3 py-2 font-mono text-sm text-white focus:outline-none focus:border-b-orange resize-y" />
+        </div>
+
+        {/* Publicado */}
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" checked={form.published} onChange={e => setField('published', e.target.checked)}
+            className="w-4 h-4 accent-b-orange" />
+          <span className="font-body text-white">Publicar imediatamente</span>
+        </label>
+
+        <div className="flex gap-3">
+          <button onClick={handleSave} disabled={saving}
+            className="font-display uppercase px-6 py-2 bg-b-orange text-b-dark hover:bg-b-neon transition-all disabled:opacity-40">
+            {saving ? 'Salvando…' : 'Salvar'}
+          </button>
+          <button onClick={() => setView('list')}
+            className="font-display uppercase px-6 py-2 border border-b-stone text-gray-400 hover:text-white hover:border-white transition-all">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Lista ─────────────────────────────────────────────────────────────────
+  return (
+    <div className="space-y-8">
+      {/* Configuração da home */}
+      <div className="bg-b-gray border border-b-stone/30 p-5 flex items-center gap-4 flex-wrap">
+        <span className="font-mono text-xs text-gray-500 uppercase tracking-widest">
+          Notícias na home:
+        </span>
+        <input type="number" min={1} max={12} value={homeCount}
+          onChange={e => setHomeCount(parseInt(e.target.value, 10))}
+          className="w-20 bg-b-stone/20 border border-b-stone px-3 py-1.5 font-mono text-white text-center focus:outline-none focus:border-b-orange" />
+        <button onClick={handleSaveCount} disabled={savingCount}
+          className="font-mono text-xs uppercase px-3 py-1.5 bg-b-orange text-b-dark disabled:opacity-40 hover:bg-b-neon transition-all">
+          {savingCount ? 'Salvando…' : 'Salvar'}
+        </button>
+      </div>
+
+      {/* Header + botão novo */}
+      <div className="flex items-center justify-between">
+        <h3 className="font-display text-2xl uppercase text-white">
+          {news.length} notícia{news.length !== 1 ? 's' : ''}
+        </h3>
+        <button onClick={openNew}
+          className="font-display uppercase text-sm px-4 py-2 bg-b-neon text-b-dark hover:bg-b-neon/80 transition-all">
+          + Nova Notícia
+        </button>
+      </div>
+
+      {/* Lista */}
+      {news.length === 0 ? (
+        <p className="font-body text-gray-600">Nenhuma notícia ainda.</p>
+      ) : (
+        <div className="space-y-3">
+          {news.map(item => (
+            <div key={item.id}
+              className="flex items-center gap-4 bg-b-gray border border-b-stone/20 px-4 py-3">
+              {item.cover_url && (
+                <img src={item.cover_url} alt="" className="w-16 h-10 object-cover shrink-0" />
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-body text-white truncate">{item.title}</p>
+                <p className="font-mono text-[10px] text-gray-600">/noticias/{item.slug}</p>
+              </div>
+              <span className={`font-mono text-[10px] uppercase px-2 py-0.5 shrink-0 ${
+                item.published
+                  ? 'bg-b-neon/20 text-b-neon border border-b-neon/30'
+                  : 'bg-b-stone/30 text-gray-500 border border-b-stone/30'
+              }`}>
+                {item.published ? 'Publicado' : 'Rascunho'}
+              </span>
+              <button onClick={() => handleTogglePublish(item)}
+                className="font-mono text-[11px] uppercase px-2 py-1 border border-b-stone/40 text-gray-500 hover:text-white hover:border-white transition-all shrink-0">
+                {item.published ? 'Despublicar' : 'Publicar'}
+              </button>
+              <button onClick={() => loadFull(item.id)}
+                className="font-mono text-[11px] uppercase px-2 py-1 border border-b-orange/40 text-b-orange hover:border-b-orange transition-all shrink-0">
+                Editar
+              </button>
+              <button onClick={() => handleDelete(item.id, item.title)}
+                className="font-mono text-[11px] uppercase px-2 py-1 border border-red-900/40 text-red-500 hover:text-red-300 hover:border-red-500 transition-all shrink-0">
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )

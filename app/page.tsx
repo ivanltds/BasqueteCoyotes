@@ -7,6 +7,7 @@ import InstaFeed from '@/components/InstaFeed'
 import MarqueeStrip from '@/components/MarqueeStrip'
 import HeroSlideshow, { type SiteMedia } from '@/components/HeroSlideshow'
 import AudioPlayer from '@/components/AudioPlayer'
+import NewsSection from '@/components/NewsSection'
 import { getSupabasePublic } from '@/lib/supabase-server'
 import { getCloudinaryImages } from '@/lib/cloudinary'
 
@@ -373,6 +374,9 @@ export default async function Home() {
           <InstaFeed profile="coyotes" />
         </div>
       </section>
+
+      {/* ── NOTÍCIAS ── */}
+      <NewsSection />
 
       {/* ── GALERIA DINÂMICA ── */}
       <section id="galeria" className="py-24 px-6 md:px-20 max-w-7xl mx-auto scroll-mt-32">
