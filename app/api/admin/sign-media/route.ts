@@ -10,6 +10,7 @@ const SECTION_FOLDERS: Record<string, string> = {
   person_ivan:      'coyotes/team/ivan',
   person_geovani:   'coyotes/team/geovani',
   news_cover:       'coyotes/news',
+  news_inline:      'coyotes/news/inline',
 }
 
 export async function GET(req: NextRequest) {

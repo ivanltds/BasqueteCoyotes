@@ -2,6 +2,26 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isAuthenticated } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-server'
 
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
+  }
+
+  const { id } = await params
+  const sb = getSupabaseAdmin()
+  const { data, error } = await sb
+    .from('news')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ news: data })
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -19,7 +39,6 @@ export async function PATCH(
     if (f in body) allowed[f] = body[f]
   }
 
-  // Se publicando agora, registra published_at
   if (body.published === true) {
     allowed.published_at = new Date().toISOString()
   } else if (body.published === false) {

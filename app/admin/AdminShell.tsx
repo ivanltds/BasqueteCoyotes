@@ -1106,6 +1106,13 @@ interface NewsForm {
   published: boolean
 }
 
+interface InlineImage {
+  id: string
+  cloudinary_url: string
+  sort_order: number
+  caption: string
+}
+
 const EMPTY_FORM: NewsForm = {
   title: '', slug: '', excerpt: '', content: '',
   cover_url: '', cover_public_id: '', published: false,
@@ -1121,15 +1128,18 @@ function slugify(str: string) {
 }
 
 function TabNoticias() {
-  const [news, setNews]             = useState<NewsItem[]>([])
-  const [loading, setLoading]       = useState(true)
-  const [view, setView]             = useState<'list' | 'form'>('list')
-  const [editId, setEditId]         = useState<string | null>(null)
-  const [form, setForm]             = useState<NewsForm>(EMPTY_FORM)
-  const [saving, setSaving]         = useState(false)
-  const [uploadingCover, setUploadingCover] = useState(false)
-  const [homeCount, setHomeCount]   = useState(3)
-  const [savingCount, setSavingCount] = useState(false)
+  const [news, setNews]                       = useState<NewsItem[]>([])
+  const [loading, setLoading]                 = useState(true)
+  const [view, setView]                       = useState<'list' | 'form'>('list')
+  const [editId, setEditId]                   = useState<string | null>(null)
+  const [form, setForm]                       = useState<NewsForm>(EMPTY_FORM)
+  const [saving, setSaving]                   = useState(false)
+  const [uploadingCover, setUploadingCover]   = useState(false)
+  const [homeCount, setHomeCount]             = useState(3)
+  const [savingCount, setSavingCount]         = useState(false)
+  const [inlineImages, setInlineImages]       = useState<InlineImage[]>([])
+  const [uploadingInline, setUploadingInline] = useState(false)
+  const [editCaption, setEditCaption]         = useState<Record<string, string>>({})
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -1146,40 +1156,51 @@ function TabNoticias() {
 
   useEffect(() => { load() }, [load])
 
+  async function loadInlineImages(id: string) {
+    const res = await fetch(`/api/admin/news/${id}/images`)
+    const { images } = await res.json()
+    const imgs: InlineImage[] = images ?? []
+    setInlineImages(imgs)
+    const caps: Record<string, string> = {}
+    imgs.forEach((img: InlineImage) => { caps[img.id] = img.caption ?? '' })
+    setEditCaption(caps)
+  }
+
   function openNew() {
     setEditId(null)
     setForm(EMPTY_FORM)
+    setInlineImages([])
+    setEditCaption({})
     setView('form')
   }
 
-  function openEdit(item: NewsItem & { content?: string; excerpt?: string | null }) {
+  function openEdit(item: NewsItem & { content?: string }) {
     setEditId(item.id)
     setForm({
-      title:            item.title,
-      slug:             item.slug,
-      excerpt:          item.excerpt ?? '',
-      content:          (item as NewsItem & { content?: string }).content ?? '',
-      cover_url:        item.cover_url ?? '',
-      cover_public_id:  '',
-      published:        item.published,
+      title:           item.title,
+      slug:            item.slug,
+      excerpt:         item.excerpt ?? '',
+      content:         item.content ?? '',
+      cover_url:       item.cover_url ?? '',
+      cover_public_id: '',
+      published:       item.published,
     })
+    setInlineImages([])
+    setEditCaption({})
+    loadInlineImages(item.id)
     setView('form')
   }
 
   async function loadFull(id: string) {
-    const res  = await fetch(`/api/admin/news`)
-    // Fetch full content via admin list (all fields)
-    const full = await fetch('/api/admin/news').then(r => r.json())
-    const item = (full.news ?? []).find((n: NewsItem & { content?: string }) => n.id === id)
+    const res = await fetch(`/api/admin/news/${id}`)
+    const { news: item } = await res.json()
     if (item) openEdit(item)
   }
 
   function setField<K extends keyof NewsForm>(key: K, value: NewsForm[K]) {
     setForm(f => {
       const next = { ...f, [key]: value }
-      if (key === 'title' && !editId) {
-        next.slug = slugify(value as string)
-      }
+      if (key === 'title' && !editId) next.slug = slugify(value as string)
       return next
     })
   }
@@ -1187,26 +1208,66 @@ function TabNoticias() {
   async function handleCoverUpload(file: File) {
     setUploadingCover(true)
     try {
-      const sigRes = await fetch('/api/admin/sign-media?section=news_cover')
-      const sig    = await sigRes.json()
-
-      const fd = new FormData()
-      fd.append('file', file)
-      fd.append('api_key',   sig.api_key)
-      fd.append('timestamp', sig.timestamp)
-      fd.append('signature', sig.signature)
-      fd.append('folder',    sig.folder)
-
+      const sig    = await fetch('/api/admin/sign-media?section=news_cover').then(r => r.json())
+      const fd     = new FormData()
+      fd.append('file', file); fd.append('api_key', sig.api_key)
+      fd.append('timestamp', sig.timestamp); fd.append('signature', sig.signature)
+      fd.append('folder', sig.folder)
       const up     = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloud_name}/image/upload`, { method: 'POST', body: fd })
       const upData = await up.json()
       if (!up.ok) throw new Error(upData.error?.message ?? 'Upload falhou')
-
       setForm(f => ({ ...f, cover_url: upData.secure_url, cover_public_id: upData.public_id }))
-    } catch (e) {
-      alert('Erro no upload: ' + (e as Error).message)
-    } finally {
-      setUploadingCover(false)
-    }
+    } catch (e) { alert('Erro no upload: ' + (e as Error).message) }
+    finally { setUploadingCover(false) }
+  }
+
+  async function handleInlineUpload(file: File) {
+    if (!editId) return
+    setUploadingInline(true)
+    try {
+      const sig    = await fetch('/api/admin/sign-media?section=news_inline').then(r => r.json())
+      const fd     = new FormData()
+      fd.append('file', file); fd.append('api_key', sig.api_key)
+      fd.append('timestamp', sig.timestamp); fd.append('signature', sig.signature)
+      fd.append('folder', sig.folder)
+      const up     = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloud_name}/image/upload`, { method: 'POST', body: fd })
+      const upData = await up.json()
+      if (!up.ok) throw new Error(upData.error?.message ?? 'Upload falhou')
+      await fetch(`/api/admin/news/${editId}/images`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cloudinary_url: upData.secure_url, cloudinary_public_id: upData.public_id }),
+      })
+      await loadInlineImages(editId)
+    } catch (e) { alert('Erro no upload: ' + (e as Error).message) }
+    finally { setUploadingInline(false) }
+  }
+
+  async function handleInlineDelete(imgId: string) {
+    if (!editId || !confirm('Remover esta foto?')) return
+    await fetch(`/api/admin/news/${editId}/images/${imgId}`, { method: 'DELETE' })
+    await loadInlineImages(editId)
+  }
+
+  async function handleInlineReorder(imgId: string, dir: 'up' | 'down') {
+    if (!editId) return
+    const idx  = inlineImages.findIndex(i => i.id === imgId)
+    const swap = dir === 'up' ? idx - 1 : idx + 1
+    if (swap < 0 || swap >= inlineImages.length) return
+    const next = [...inlineImages];
+    [next[idx], next[swap]] = [next[swap], next[idx]]
+    setInlineImages(next.map((img, i) => ({ ...img, sort_order: i })))
+    await fetch(`/api/admin/news/${editId}/images`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: next.map(i => i.id) }),
+    })
+  }
+
+  async function handleSaveCaption(imgId: string) {
+    if (!editId) return
+    await fetch(`/api/admin/news/${editId}/images/${imgId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ caption: editCaption[imgId] ?? '' }),
+    })
   }
 
   async function handleSave() {
@@ -1215,19 +1276,11 @@ function TabNoticias() {
     try {
       const url    = editId ? `/api/admin/news/${editId}` : '/api/admin/news'
       const method = editId ? 'PATCH' : 'POST'
-      const res    = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
+      const res    = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
       if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
-      setView('list')
-      await load()
-    } catch (e) {
-      alert('Erro ao salvar: ' + (e as Error).message)
-    } finally {
-      setSaving(false)
-    }
+      setView('list'); await load()
+    } catch (e) { alert('Erro ao salvar: ' + (e as Error).message) }
+    finally { setSaving(false) }
   }
 
   async function handleDelete(id: string, title: string) {
@@ -1238,8 +1291,7 @@ function TabNoticias() {
 
   async function handleTogglePublish(item: NewsItem) {
     await fetch(`/api/admin/news/${item.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ published: !item.published }),
     })
     await load()
@@ -1248,8 +1300,7 @@ function TabNoticias() {
   async function handleSaveCount() {
     setSavingCount(true)
     await fetch('/api/admin/site-config', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ home_news_count: String(homeCount) }),
     })
     setSavingCount(false)
@@ -1257,7 +1308,7 @@ function TabNoticias() {
 
   if (loading) return <Spinner />
 
-  // ── Formulário de criação/edição ──────────────────────────────────────────
+  // ── Formulário ──────────────────────────────────────────────────────────
   if (view === 'form') {
     return (
       <div className="max-w-3xl space-y-6">
@@ -1265,20 +1316,15 @@ function TabNoticias() {
           <h3 className="font-display text-2xl uppercase text-white">
             {editId ? 'Editar Notícia' : 'Nova Notícia'}
           </h3>
-          <button onClick={() => setView('list')}
-            className="font-mono text-xs text-gray-500 hover:text-white transition-colors">
-            ← Voltar
-          </button>
+          <button onClick={() => setView('list')} className="font-mono text-xs text-gray-500 hover:text-white transition-colors">← Voltar</button>
         </div>
 
-        {/* Título */}
         <div>
           <label className="font-mono text-xs text-gray-500 uppercase tracking-widest block mb-1">Título *</label>
           <input value={form.title} onChange={e => setField('title', e.target.value)}
             className="w-full bg-b-stone/20 border border-b-stone px-3 py-2 font-body text-white focus:outline-none focus:border-b-orange" />
         </div>
 
-        {/* Slug */}
         <div>
           <label className="font-mono text-xs text-gray-500 uppercase tracking-widest block mb-1">Slug (URL) *</label>
           <input value={form.slug} onChange={e => setField('slug', e.target.value)}
@@ -1286,39 +1332,91 @@ function TabNoticias() {
           <p className="font-mono text-[10px] text-gray-600 mt-1">/noticias/{form.slug || '...'}</p>
         </div>
 
-        {/* Excerpt */}
         <div>
           <label className="font-mono text-xs text-gray-500 uppercase tracking-widest block mb-1">Resumo (opcional)</label>
           <textarea value={form.excerpt} onChange={e => setField('excerpt', e.target.value)} rows={2}
             className="w-full bg-b-stone/20 border border-b-stone px-3 py-2 font-body text-white focus:outline-none focus:border-b-orange resize-none" />
         </div>
 
-        {/* Capa */}
         <div>
           <label className="font-mono text-xs text-gray-500 uppercase tracking-widest block mb-2">Imagem de Capa</label>
-          {form.cover_url && (
-            <img src={form.cover_url} alt="capa" className="w-48 h-28 object-cover mb-3 border border-b-stone/30" />
-          )}
+          {form.cover_url && <img src={form.cover_url} alt="capa" className="w-48 h-28 object-cover mb-3 border border-b-stone/30" />}
           <input type="file" accept="image/*"
             onChange={e => { const f = e.target.files?.[0]; if (f) handleCoverUpload(f) }}
             className="font-mono text-xs text-gray-400 file:bg-b-stone/30 file:border-0 file:text-white file:font-mono file:text-xs file:px-3 file:py-1 file:mr-3 file:cursor-pointer" />
           {uploadingCover && <span className="font-mono text-xs text-b-neon ml-3">Enviando…</span>}
         </div>
 
-        {/* Conteúdo Markdown */}
         <div>
           <label className="font-mono text-xs text-gray-500 uppercase tracking-widest block mb-1">
-            Conteúdo (Markdown)
+            Conteúdo (Markdown) — use &lt;IMG&gt; para inserir fotos do corpo
           </label>
           <textarea value={form.content} onChange={e => setField('content', e.target.value)} rows={16}
-            placeholder="# Título&#10;&#10;Escreva o conteúdo em Markdown..."
+            placeholder={'# Título\n\nParágrafo inicial...\n\n<IMG>\n\nContinua o texto...'}
             className="w-full bg-b-stone/20 border border-b-stone px-3 py-2 font-mono text-sm text-white focus:outline-none focus:border-b-orange resize-y" />
         </div>
 
-        {/* Publicado */}
+        {/* Fotos do corpo */}
+        <div className="border border-b-stone/40 p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <label className="font-mono text-xs text-gray-500 uppercase tracking-widest">
+              Fotos do corpo ({inlineImages.length})
+            </label>
+            {editId ? (
+              <label className="cursor-pointer font-mono text-xs uppercase px-3 py-1.5 bg-b-stone/30 text-white hover:bg-b-stone/50 transition-all">
+                {uploadingInline ? 'Enviando…' : '+ Adicionar foto'}
+                <input type="file" accept="image/*" className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) handleInlineUpload(f); e.target.value = '' }}
+                  disabled={uploadingInline} />
+              </label>
+            ) : (
+              <span className="font-mono text-[11px] text-gray-600">Salve a notícia primeiro</span>
+            )}
+          </div>
+
+          {inlineImages.length === 0 ? (
+            <p className="font-mono text-[11px] text-gray-600">
+              Nenhuma foto. Use &lt;IMG&gt; no conteúdo para marcar posições.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {inlineImages.map((img, idx) => (
+                <div key={img.id} className="bg-b-stone/20 p-3 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-xs text-gray-600 w-5 shrink-0 text-center">{idx + 1}</span>
+                    <img src={img.cloudinary_url} alt="" className="w-28 h-16 object-cover shrink-0 border border-b-stone/30" />
+                    <div className="flex flex-col gap-1 shrink-0">
+                      <button onClick={() => handleInlineReorder(img.id, 'up')} disabled={idx === 0}
+                        className="font-mono text-[10px] px-2 py-0.5 border border-b-stone/40 text-gray-500 hover:text-white disabled:opacity-20">▲</button>
+                      <button onClick={() => handleInlineReorder(img.id, 'down')} disabled={idx === inlineImages.length - 1}
+                        className="font-mono text-[10px] px-2 py-0.5 border border-b-stone/40 text-gray-500 hover:text-white disabled:opacity-20">▼</button>
+                    </div>
+                    <button onClick={() => handleInlineDelete(img.id)}
+                      className="ml-auto font-mono text-xs text-red-500 hover:text-red-300 px-2 py-1 border border-red-900/40 hover:border-red-500 transition-all">
+                      Remover
+                    </button>
+                  </div>
+                  <div className="flex gap-2 items-center pl-8">
+                    <input
+                      type="text"
+                      placeholder="Legenda (ex: Foto: João Silva / Coyotes)"
+                      value={editCaption[img.id] ?? ''}
+                      onChange={e => setEditCaption(c => ({ ...c, [img.id]: e.target.value }))}
+                      className="flex-1 bg-b-stone/20 border border-b-stone/40 px-2 py-1 font-mono text-xs text-gray-300 focus:outline-none focus:border-b-orange placeholder:text-gray-600"
+                    />
+                    <button onClick={() => handleSaveCaption(img.id)}
+                      className="font-mono text-[11px] uppercase px-2 py-1 bg-b-stone/40 text-white hover:bg-b-orange hover:text-b-dark transition-all">
+                      Salvar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <label className="flex items-center gap-3 cursor-pointer">
-          <input type="checkbox" checked={form.published} onChange={e => setField('published', e.target.checked)}
-            className="w-4 h-4 accent-b-orange" />
+          <input type="checkbox" checked={form.published} onChange={e => setField('published', e.target.checked)} className="w-4 h-4 accent-b-orange" />
           <span className="font-body text-white">Publicar imediatamente</span>
         </label>
 
@@ -1336,14 +1434,11 @@ function TabNoticias() {
     )
   }
 
-  // ── Lista ─────────────────────────────────────────────────────────────────
+  // ── Lista ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-8">
-      {/* Configuração da home */}
       <div className="bg-b-gray border border-b-stone/30 p-5 flex items-center gap-4 flex-wrap">
-        <span className="font-mono text-xs text-gray-500 uppercase tracking-widest">
-          Notícias na home:
-        </span>
+        <span className="font-mono text-xs text-gray-500 uppercase tracking-widest">Notícias na home:</span>
         <input type="number" min={1} max={12} value={homeCount}
           onChange={e => setHomeCount(parseInt(e.target.value, 10))}
           className="w-20 bg-b-stone/20 border border-b-stone px-3 py-1.5 font-mono text-white text-center focus:outline-none focus:border-b-orange" />
@@ -1353,37 +1448,26 @@ function TabNoticias() {
         </button>
       </div>
 
-      {/* Header + botão novo */}
       <div className="flex items-center justify-between">
-        <h3 className="font-display text-2xl uppercase text-white">
-          {news.length} notícia{news.length !== 1 ? 's' : ''}
-        </h3>
+        <h3 className="font-display text-2xl uppercase text-white">{news.length} notícia{news.length !== 1 ? 's' : ''}</h3>
         <button onClick={openNew}
           className="font-display uppercase text-sm px-4 py-2 bg-b-neon text-b-dark hover:bg-b-neon/80 transition-all">
           + Nova Notícia
         </button>
       </div>
 
-      {/* Lista */}
       {news.length === 0 ? (
         <p className="font-body text-gray-600">Nenhuma notícia ainda.</p>
       ) : (
         <div className="space-y-3">
           {news.map(item => (
-            <div key={item.id}
-              className="flex items-center gap-4 bg-b-gray border border-b-stone/20 px-4 py-3">
-              {item.cover_url && (
-                <img src={item.cover_url} alt="" className="w-16 h-10 object-cover shrink-0" />
-              )}
+            <div key={item.id} className="flex items-center gap-4 bg-b-gray border border-b-stone/20 px-4 py-3">
+              {item.cover_url && <img src={item.cover_url} alt="" className="w-16 h-10 object-cover shrink-0" />}
               <div className="flex-1 min-w-0">
                 <p className="font-body text-white truncate">{item.title}</p>
                 <p className="font-mono text-[10px] text-gray-600">/noticias/{item.slug}</p>
               </div>
-              <span className={`font-mono text-[10px] uppercase px-2 py-0.5 shrink-0 ${
-                item.published
-                  ? 'bg-b-neon/20 text-b-neon border border-b-neon/30'
-                  : 'bg-b-stone/30 text-gray-500 border border-b-stone/30'
-              }`}>
+              <span className={`font-mono text-[10px] uppercase px-2 py-0.5 shrink-0 ${item.published ? 'bg-b-neon/20 text-b-neon border border-b-neon/30' : 'bg-b-stone/30 text-gray-500 border border-b-stone/30'}`}>
                 {item.published ? 'Publicado' : 'Rascunho'}
               </span>
               <button onClick={() => handleTogglePublish(item)}

@@ -7,6 +7,13 @@ import { getSupabasePublic } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
 
+interface NewsImage {
+  id: string
+  cloudinary_url: string
+  caption: string | null
+  sort_order: number
+}
+
 interface NewsItem {
   id: string
   title: string
@@ -26,6 +33,16 @@ async function getNews(slug: string): Promise<NewsItem | null> {
     .eq('published', true)
     .single()
   return data ?? null
+}
+
+async function getImages(newsId: string): Promise<NewsImage[]> {
+  const sb = getSupabasePublic()
+  const { data } = await sb
+    .from('news_images')
+    .select('id, cloudinary_url, caption, sort_order')
+    .eq('news_id', newsId)
+    .order('sort_order', { ascending: true })
+  return data ?? []
 }
 
 export async function generateMetadata(
@@ -54,35 +71,31 @@ export default async function NewsPage(
   const news = await getNews(slug)
   if (!news) notFound()
 
+  const images = await getImages(news.id)
+
   const dateStr = news.published_at
     ? new Date(news.published_at).toLocaleDateString('pt-BR', {
         day: '2-digit', month: 'long', year: 'numeric',
       })
     : ''
 
+  // Divide conteúdo pelos marcadores <IMG> (case-insensitive)
+  const parts = news.content.split(/<IMG>/gi)
+
   return (
     <main className="min-h-screen bg-b-dark text-white pt-24 pb-24">
-      {/* Hero capa */}
+      {/* Capa */}
       {news.cover_url && (
         <div className="relative w-full h-[50vh] max-h-[480px] mb-12">
-          <Image
-            src={news.cover_url}
-            alt={news.title}
-            fill
-            className="object-cover"
-            priority
-          />
+          <Image src={news.cover_url} alt={news.title} fill className="object-cover" priority />
           <div className="absolute inset-0 bg-gradient-to-t from-b-dark via-b-dark/40 to-transparent" />
         </div>
       )}
 
       <article className="max-w-3xl mx-auto px-6">
-        {/* Meta */}
         <div className="mb-6">
-          <Link
-            href="/noticias"
-            className="font-mono text-xs text-gray-600 uppercase tracking-widest hover:text-b-orange transition-colors"
-          >
+          <Link href="/noticias"
+            className="font-mono text-xs text-gray-600 uppercase tracking-widest hover:text-b-orange transition-colors">
             ← Notícias
           </Link>
         </div>
@@ -101,24 +114,47 @@ export default async function NewsPage(
           </p>
         )}
 
-        {/* Conteúdo Markdown */}
-        <div className="prose prose-invert prose-lg max-w-none
-          prose-headings:font-display prose-headings:uppercase prose-headings:text-white
-          prose-p:text-gray-300 prose-p:leading-relaxed
-          prose-a:text-b-orange prose-a:no-underline hover:prose-a:text-b-neon
-          prose-strong:text-white
-          prose-li:text-gray-300
-          prose-hr:border-b-stone
-          prose-blockquote:border-b-orange prose-blockquote:text-gray-400">
-          <ReactMarkdown>{news.content}</ReactMarkdown>
-        </div>
+        {/* Conteúdo intercalado com imagens */}
+        {parts.map((part, i) => (
+          <div key={i}>
+            {/* Bloco de markdown */}
+            {part.trim() && (
+              <div className="prose prose-invert prose-lg max-w-none
+                prose-headings:font-display prose-headings:uppercase prose-headings:text-white
+                prose-p:text-gray-300 prose-p:leading-relaxed
+                prose-a:text-b-orange prose-a:no-underline hover:prose-a:text-b-neon
+                prose-strong:text-white prose-li:text-gray-300
+                prose-hr:border-b-stone
+                prose-blockquote:border-b-orange prose-blockquote:text-gray-400">
+                <ReactMarkdown>{part}</ReactMarkdown>
+              </div>
+            )}
 
-        {/* Voltar */}
+            {/* Imagem inline (se existir para esta posição) */}
+            {i < images.length && (
+              <figure className="my-10 flex flex-col items-center">
+                <div className="relative w-full max-w-2xl">
+                  <Image
+                    src={images[i].cloudinary_url}
+                    alt={images[i].caption ?? ''}
+                    width={800}
+                    height={500}
+                    className="w-full h-auto object-cover"
+                  />
+                </div>
+                {images[i].caption && (
+                  <figcaption className="mt-3 font-mono text-xs text-gray-500 text-center max-w-lg">
+                    {images[i].caption}
+                  </figcaption>
+                )}
+              </figure>
+            )}
+          </div>
+        ))}
+
         <div className="mt-16 pt-8 border-t border-b-stone">
-          <Link
-            href="/noticias"
-            className="font-display uppercase text-b-orange hover:text-b-neon tracking-widest transition-colors"
-          >
+          <Link href="/noticias"
+            className="font-display uppercase text-b-orange hover:text-b-neon tracking-widest transition-colors">
             ← Todas as notícias
           </Link>
         </div>
