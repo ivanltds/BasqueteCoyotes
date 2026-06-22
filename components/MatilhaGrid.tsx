@@ -83,11 +83,11 @@ export default function MatilhaGrid({ members = [], type = 'coyotes', showJoinBu
   return (
     <>
       {/* Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+      <div className="flex flex-col gap-3">
         {visible.map(m => <MemberCard key={m.id} data={m} type={type} />)}
         {/* Slots vazios para manter altura */}
         {Array.from({ length: PAGE_SIZE - visible.length }).map((_, i) => (
-          <div key={`empty-${i}`} className="aspect-[3/4] bg-b-stone/5 border border-b-stone/10" />
+          <div key={`empty-${i}`} className="h-[120px] bg-b-stone/5 border border-b-stone/10" />
         ))}
       </div>
 
