@@ -84,11 +84,7 @@ export default async function TestimonialsSection({ type }: Props) {
                     <p className="font-body font-bold text-white text-sm truncate">{t.name}</p>
                     <p className="font-mono text-[10px] text-gray-600 uppercase">{t.city}</p>
                   </div>
-                  {t.rating != null && (
-                    <span className="font-display text-lg shrink-0" style={{ color: accent }}>
-                      {t.rating}<span className="font-mono text-[10px] text-gray-600">/10</span>
-                    </span>
-                  )}
+
                 </div>
               </article>
             )
