@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Carteirinha, { type CarterinhaData } from './Carteirinha'
 
 interface Props {
@@ -37,7 +38,7 @@ export default function CarterinhaModal({ data, type, onClose }: Props) {
     }
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
@@ -98,6 +99,7 @@ export default function CarterinhaModal({ data, type, onClose }: Props) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

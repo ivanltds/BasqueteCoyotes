@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 const MONTHS = [
   'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
@@ -108,7 +109,7 @@ export default function JoinForm({ type, onSuccess, onClose }: Props) {
   const busy = uploading || saving
   const busyLabel = uploading ? 'Enviando foto…' : saving ? 'Cadastrando…' : 'Cadastrar'
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
@@ -197,6 +198,7 @@ export default function JoinForm({ type, onSuccess, onClose }: Props) {
           </p>
         )}
       </form>
-    </div>
+    </div>,
+    document.body
   )
 }

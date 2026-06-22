@@ -26,24 +26,23 @@ interface Props {
 }
 
 export default function Carteirinha({ data, type, plain = false }: Props) {
-  const subtitle  = type === 'coyotes' ? 'Membro Oficial' : `${data.edition ?? 4}ª Edição · Participante`
-  const teamLabel = type === 'coyotes' ? 'COYOTES' : 'BASKFERIA'
-  const sinceLabel = type === 'coyotes' && data.started_month && data.started_year
+  const isBask    = type === 'baskferia'
+  const accent    = isBask ? '#E0FF00' : '#FF5722'
+  const logoSrc   = isBask ? '/images/logos/logo-baskferia.png' : '/images/logos/logo-coyotes.png'
+  const bg        = isBask
+    ? 'linear-gradient(135deg, #0D0D0D 0%, #1a1a0a 100%)'
+    : 'linear-gradient(135deg, #161616 0%, #2a2a2a 100%)'
+  const subtitle  = isBask ? `${data.edition ?? 4}ª Edição · Participante` : 'Membro Oficial'
+  const teamLabel = isBask ? 'BASKFERIA' : 'COYOTES'
+  const sinceLabel = !isBask && data.started_month && data.started_year
     ? `${MONTHS[(data.started_month - 1)]}/${data.started_year}`
-    : type === 'baskferia' ? `${data.year ?? 2026}` : ''
-
-  const Img = plain
-    ? ({ src, alt, className }: { src: string; alt: string; className?: string }) =>
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={alt} className={className} crossOrigin="anonymous" />
-    : ({ src, alt, className }: { src: string; alt: string; className?: string }) =>
-        <Image src={src} alt={alt} fill className={className} unoptimized />
+    : isBask ? `${data.year ?? 2026}` : ''
 
   return (
     <div style={{
       width: '100%', maxWidth: 480,
-      background: 'linear-gradient(135deg, #161616 0%, #2a2a2a 100%)',
-      border: '2px solid #FF5722',
+      background: bg,
+      border: `2px solid ${accent}`,
       borderRadius: 12,
       padding: '16px 20px',
       boxSizing: 'border-box',
@@ -54,7 +53,7 @@ export default function Carteirinha({ data, type, plain = false }: Props) {
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start',
         borderBottom:'1px solid #444', paddingBottom:10, marginBottom:14 }}>
         <div>
-          <div style={{ color:'#FF5722', fontSize:22, fontWeight:900, textTransform:'uppercase', letterSpacing:1 }}>
+          <div style={{ color: accent, fontSize:22, fontWeight:900, textTransform:'uppercase', letterSpacing:1 }}>
             {teamLabel}
           </div>
           <div style={{ fontSize:9, color:'#aaa', textTransform:'uppercase', letterSpacing:2, marginTop:2 }}>
@@ -63,8 +62,9 @@ export default function Carteirinha({ data, type, plain = false }: Props) {
         </div>
         <div style={{ position:'relative', height:50, width:50 }}>
           {plain
-            ? <img src="/images/logos/logo-coyotes.png" alt="Logo" style={{ height:50, width:'auto', objectFit:'contain' }} />
-            : <Image src="/images/logos/logo-coyotes.png" alt="Logo" fill className="object-contain" />
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img src={logoSrc} alt="Logo" style={{ height:50, width:'auto', objectFit:'contain' }} crossOrigin="anonymous" />
+            : <Image src={logoSrc} alt="Logo" fill className="object-contain" />
           }
         </div>
       </div>
@@ -72,7 +72,7 @@ export default function Carteirinha({ data, type, plain = false }: Props) {
       {/* Body */}
       <div style={{ display:'flex', gap:16 }}>
         {/* Foto */}
-        <div style={{ width:90, height:115, background:'#000', border:'2px solid #FF5722',
+        <div style={{ width:90, height:115, background:'#000', border: `2px solid ${accent}`,
           borderRadius:6, flexShrink:0, overflow:'hidden', position:'relative' }}>
           {plain
             // eslint-disable-next-line @next/next/no-img-element
@@ -85,28 +85,28 @@ export default function Carteirinha({ data, type, plain = false }: Props) {
         {/* Info */}
         <div style={{ display:'flex', flexDirection:'column', justifyContent:'space-between', flex:1 }}>
           <div>
-            <div style={{ fontSize:8, color:'#FF5722', textTransform:'uppercase', fontWeight:700 }}>Nome</div>
+            <div style={{ fontSize:8, color: accent, textTransform:'uppercase', fontWeight:700 }}>Nome</div>
             <div style={{ fontSize:15, color:'#f0f0f0', fontWeight:700, textTransform:'uppercase' }}>{data.name}</div>
           </div>
           <div style={{ display:'flex', gap:16 }}>
             <div>
-              <div style={{ fontSize:8, color:'#FF5722', textTransform:'uppercase', fontWeight:700 }}>Altura</div>
+              <div style={{ fontSize:8, color: accent, textTransform:'uppercase', fontWeight:700 }}>Altura</div>
               <div style={{ fontSize:13, color:'#f0f0f0', fontWeight:600, textTransform:'uppercase' }}>{data.height}</div>
             </div>
             <div>
-              <div style={{ fontSize:8, color:'#FF5722', textTransform:'uppercase', fontWeight:700 }}>
-                {type === 'coyotes' ? 'Desde' : 'Edição'}
+              <div style={{ fontSize:8, color: accent, textTransform:'uppercase', fontWeight:700 }}>
+                {isBask ? 'Edição' : 'Desde'}
               </div>
               <div style={{ fontSize:13, color:'#f0f0f0', fontWeight:600, textTransform:'uppercase' }}>{sinceLabel}</div>
             </div>
           </div>
           <div style={{ display:'flex', gap:16 }}>
             <div>
-              <div style={{ fontSize:8, color:'#FF5722', textTransform:'uppercase', fontWeight:700 }}>Cidade</div>
+              <div style={{ fontSize:8, color: accent, textTransform:'uppercase', fontWeight:700 }}>Cidade</div>
               <div style={{ fontSize:13, color:'#f0f0f0', fontWeight:600, textTransform:'uppercase' }}>{data.city}</div>
             </div>
             <div>
-              <div style={{ fontSize:8, color:'#FF5722', textTransform:'uppercase', fontWeight:700 }}>Bairro</div>
+              <div style={{ fontSize:8, color: accent, textTransform:'uppercase', fontWeight:700 }}>Bairro</div>
               <div style={{ fontSize:13, color:'#f0f0f0', fontWeight:600, textTransform:'uppercase' }}>{data.neighborhood}</div>
             </div>
           </div>
