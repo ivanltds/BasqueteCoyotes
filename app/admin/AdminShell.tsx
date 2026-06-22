@@ -21,7 +21,7 @@ interface Gallery {
   photo_count: number
 }
 
-type Tab = 'aprovacoes' | 'fotos' | 'galerias' | 'midia' | 'audio' | 'noticias' | 'membros'
+type Tab = 'aprovacoes' | 'fotos' | 'galerias' | 'midia' | 'audio' | 'noticias' | 'membros' | 'feedbacks'
 
 interface SiteMediaItem {
   id: string
@@ -71,6 +71,7 @@ export default function AdminShell() {
           { id: 'audio',      label: 'Áudio'      },
           { id: 'noticias',   label: 'Notícias'   },
           { id: 'membros',    label: 'Membros'    },
+          { id: 'feedbacks',  label: 'Feedbacks'  },
         ] as { id: Tab; label: string }[]).map(t => (
           <button
             key={t.id}
@@ -95,6 +96,7 @@ export default function AdminShell() {
         {tab === 'audio'      && <TabAudio />}
         {tab === 'noticias'  && <TabNoticias />}
         {tab === 'membros'   && <TabMembros />}
+        {tab === 'feedbacks' && <TabFeedbacks />}
       </div>
     </main>
   )
@@ -1504,15 +1506,28 @@ interface MemberAdmin {
   started_year: number
   photo_url: string
   approved: boolean
+  role: string
   created_at: string
+}
+
+interface MemberEditForm {
+  name: string
+  height: string
+  neighborhood: string
+  city: string
+  started_month: string
+  started_year: string
 }
 
 const MONTHS_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
 function TabMembros() {
-  const [members, setMembers]   = useState<MemberAdmin[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [filter, setFilter]     = useState<'pending' | 'approved'>('pending')
+  const [members, setMembers]     = useState<MemberAdmin[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [filter, setFilter]       = useState<'pending' | 'approved'>('pending')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm]   = useState<MemberEditForm>({ name:'', height:'', neighborhood:'', city:'', started_month:'', started_year:'' })
+  const [saving, setSaving]       = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -1523,11 +1538,52 @@ function TabMembros() {
 
   useEffect(() => { load() }, [load])
 
+  function startEdit(m: MemberAdmin) {
+    setEditingId(m.id)
+    setEditForm({
+      name:          m.name,
+      height:        m.height,
+      neighborhood:  m.neighborhood,
+      city:          m.city,
+      started_month: String(m.started_month),
+      started_year:  String(m.started_year),
+    })
+  }
+
+  async function handleSaveEdit(id: string) {
+    setSaving(true)
+    await fetch(`/api/admin/members/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name:          editForm.name.trim(),
+        height:        editForm.height.trim(),
+        neighborhood:  editForm.neighborhood.trim(),
+        city:          editForm.city.trim(),
+        started_month: parseInt(editForm.started_month, 10) || null,
+        started_year:  parseInt(editForm.started_year, 10)  || null,
+      }),
+    })
+    setSaving(false)
+    setEditingId(null)
+    await load()
+  }
+
   async function handleApprove(id: string) {
     await fetch(`/api/admin/members/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ approved: true }),
+    })
+    await load()
+  }
+
+  async function handleToggleRole(m: MemberAdmin) {
+    const newRole = m.role === 'organizador' ? 'membro' : 'organizador'
+    await fetch(`/api/admin/members/${m.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: newRole }),
     })
     await load()
   }
@@ -1565,28 +1621,262 @@ function TabMembros() {
       ) : (
         <div className="space-y-3">
           {list.map(m => (
-            <div key={m.id} className="flex items-center gap-4 bg-b-gray border border-b-stone/20 px-4 py-3">
-              {m.photo_url && (
-                <img src={m.photo_url} alt={m.name} className="w-12 h-14 object-cover object-top shrink-0 border border-b-stone/30" />
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="font-body text-white">{m.name}</p>
-                <p className="font-mono text-[10px] text-gray-600 uppercase">
-                  {m.height} · {m.city} · {m.neighborhood} · desde {MONTHS_SHORT[m.started_month - 1]}/{m.started_year}
-                </p>
-              </div>
-              {!m.approved && (
-                <button onClick={() => handleApprove(m.id)}
-                  className="font-mono text-[11px] uppercase px-3 py-1 bg-b-neon/20 border border-b-neon/40 text-b-neon hover:bg-b-neon hover:text-b-dark transition-all shrink-0">
-                  Aprovar
+            <div key={m.id} className="bg-b-gray border border-b-stone/20">
+              {/* Linha principal */}
+              <div className="flex items-center gap-4 px-4 py-3">
+                {m.photo_url && (
+                  <img src={m.photo_url} alt={m.name} className="w-12 h-14 object-cover object-top shrink-0 border border-b-stone/30" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-body text-white">{m.name}</p>
+                    {m.approved && m.role === 'organizador' && (
+                      <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 bg-b-orange/20 border border-b-orange/50 text-b-orange tracking-widest">
+                        Organizador
+                      </span>
+                    )}
+                  </div>
+                  <p className="font-mono text-[10px] text-gray-600 uppercase">
+                    {m.height} · {m.city} · {m.neighborhood} · desde {MONTHS_SHORT[(m.started_month ?? 1) - 1]}/{m.started_year}
+                  </p>
+                </div>
+                {!m.approved && (
+                  <button onClick={() => handleApprove(m.id)}
+                    className="font-mono text-[11px] uppercase px-3 py-1 bg-b-neon/20 border border-b-neon/40 text-b-neon hover:bg-b-neon hover:text-b-dark transition-all shrink-0">
+                    Aprovar
+                  </button>
+                )}
+                {m.approved && (
+                  <button onClick={() => handleToggleRole(m)}
+                    className={`font-mono text-[11px] uppercase px-2 py-1 border transition-all shrink-0 ${
+                      m.role === 'organizador'
+                        ? 'border-b-orange/60 text-b-orange hover:bg-b-orange/10'
+                        : 'border-b-stone/40 text-gray-400 hover:border-b-orange hover:text-b-orange'
+                    }`}>
+                    {m.role === 'organizador' ? 'Rebaixar' : 'Promover'}
+                  </button>
+                )}
+                <button onClick={() => editingId === m.id ? setEditingId(null) : startEdit(m)}
+                  className="font-mono text-[11px] uppercase px-2 py-1 border border-b-orange/40 text-b-orange hover:border-b-orange transition-all shrink-0">
+                  {editingId === m.id ? 'Fechar' : 'Editar'}
                 </button>
+                <button onClick={() => handleDelete(m.id, m.name)}
+                  className="font-mono text-[11px] uppercase px-2 py-1 border border-red-900/40 text-red-500 hover:text-red-300 hover:border-red-500 transition-all shrink-0">
+                  ✕
+                </button>
+              </div>
+
+              {/* Formulário de edição inline */}
+              {editingId === m.id && (
+                <div className="border-t border-b-stone/20 bg-b-dark/40 px-4 py-4 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label className="block">
+                      <span className="font-mono text-[10px] uppercase text-gray-500 mb-1 block">Nome</span>
+                      <input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                        className="w-full bg-b-stone/20 border border-b-stone px-3 py-1.5 font-body text-white text-sm focus:outline-none focus:border-b-orange" />
+                    </label>
+                    <label className="block">
+                      <span className="font-mono text-[10px] uppercase text-gray-500 mb-1 block">Altura</span>
+                      <input value={editForm.height} onChange={e => setEditForm(f => ({ ...f, height: e.target.value }))}
+                        placeholder="ex: 1.82m"
+                        className="w-full bg-b-stone/20 border border-b-stone px-3 py-1.5 font-body text-white text-sm focus:outline-none focus:border-b-orange" />
+                    </label>
+                    <label className="block">
+                      <span className="font-mono text-[10px] uppercase text-gray-500 mb-1 block">Cidade</span>
+                      <input value={editForm.city} onChange={e => setEditForm(f => ({ ...f, city: e.target.value }))}
+                        className="w-full bg-b-stone/20 border border-b-stone px-3 py-1.5 font-body text-white text-sm focus:outline-none focus:border-b-orange" />
+                    </label>
+                    <label className="block">
+                      <span className="font-mono text-[10px] uppercase text-gray-500 mb-1 block">Bairro</span>
+                      <input value={editForm.neighborhood} onChange={e => setEditForm(f => ({ ...f, neighborhood: e.target.value }))}
+                        className="w-full bg-b-stone/20 border border-b-stone px-3 py-1.5 font-body text-white text-sm focus:outline-none focus:border-b-orange" />
+                    </label>
+                    <label className="block">
+                      <span className="font-mono text-[10px] uppercase text-gray-500 mb-1 block">Mês início (1–12)</span>
+                      <input type="number" min={1} max={12} value={editForm.started_month}
+                        onChange={e => setEditForm(f => ({ ...f, started_month: e.target.value }))}
+                        className="w-full bg-b-stone/20 border border-b-stone px-3 py-1.5 font-mono text-white text-sm focus:outline-none focus:border-b-orange" />
+                    </label>
+                    <label className="block">
+                      <span className="font-mono text-[10px] uppercase text-gray-500 mb-1 block">Ano início</span>
+                      <input type="number" min={2000} max={2099} value={editForm.started_year}
+                        onChange={e => setEditForm(f => ({ ...f, started_year: e.target.value }))}
+                        className="w-full bg-b-stone/20 border border-b-stone px-3 py-1.5 font-mono text-white text-sm focus:outline-none focus:border-b-orange" />
+                    </label>
+                  </div>
+                  <div className="flex gap-3 pt-1">
+                    <button onClick={() => handleSaveEdit(m.id)} disabled={saving}
+                      className="font-display uppercase text-sm px-5 py-2 bg-b-orange text-b-dark hover:bg-b-neon transition-all disabled:opacity-40">
+                      {saving ? 'Salvando…' : 'Salvar'}
+                    </button>
+                    <button onClick={() => setEditingId(null)}
+                      className="font-display uppercase text-sm px-5 py-2 border border-b-stone text-gray-400 hover:text-white hover:border-white transition-all">
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
               )}
-              <button onClick={() => handleDelete(m.id, m.name)}
-                className="font-mono text-[11px] uppercase px-2 py-1 border border-red-900/40 text-red-500 hover:text-red-300 hover:border-red-500 transition-all shrink-0">
-                ✕
-              </button>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── TabFeedbacks ─────────────────────────────────────────────────────────────
+
+interface FeedbackEntry {
+  id: string
+  name: string
+  city: string
+  photo_url: string
+  rating: number | null
+  story: string | null
+  highlights: string | null
+  improvement_points: string | null
+  suggestions: string | null
+  testimonial_approved: boolean
+  approved: boolean
+  source: 'coyotes' | 'baskferia'
+  created_at: string
+}
+
+function TabFeedbacks() {
+  const [feedback, setFeedback]   = useState<FeedbackEntry[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [filter, setFilter]       = useState<'all' | 'coyotes' | 'baskferia'>('all')
+  const [expanded, setExpanded]   = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const { feedback: f } = await fetch('/api/admin/feedback').then(r => r.json())
+    setFeedback(f ?? [])
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  async function toggleTestimonial(entry: FeedbackEntry) {
+    const endpoint = entry.source === 'coyotes'
+      ? `/api/admin/members/${entry.id}`
+      : `/api/admin/baskferia-participants/${entry.id}`
+    await fetch(endpoint, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ testimonial_approved: !entry.testimonial_approved }),
+    })
+    await load()
+  }
+
+  if (loading) return <Spinner />
+
+  const list = filter === 'all' ? feedback : feedback.filter(f => f.source === filter)
+  const approvedCount = feedback.filter(f => f.testimonial_approved).length
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h3 className="font-display text-2xl uppercase text-white">Feedbacks</h3>
+          <p className="font-mono text-xs text-gray-500 mt-1">
+            {feedback.length} resposta{feedback.length !== 1 ? 's' : ''} · {approvedCount} depoimento{approvedCount !== 1 ? 's' : ''} aprovado{approvedCount !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          {([['all','Todos'], ['coyotes','Coyotes'], ['baskferia','Baskferia']] as const).map(([k, lbl]) => (
+            <button key={k} onClick={() => setFilter(k)}
+              className={`font-mono text-xs uppercase px-3 py-1.5 border transition-all ${
+                filter === k ? 'border-b-orange text-b-orange bg-b-orange/10' : 'border-b-stone/40 text-gray-500 hover:text-white'
+              }`}>
+              {lbl}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {list.length === 0 ? (
+        <p className="font-body text-gray-600">Nenhum feedback ainda.</p>
+      ) : (
+        <div className="space-y-3">
+          {list.map(entry => {
+            const isOpen   = expanded === entry.id
+            const srcColor = entry.source === 'baskferia' ? '#E0FF00' : '#FF5722'
+            const text     = entry.story || entry.highlights || ''
+            const preview  = text.length > 120 ? text.slice(0, 120) + '…' : text
+
+            return (
+              <div key={entry.id} className="bg-b-gray border border-b-stone/20">
+                {/* Header row */}
+                <div className="flex items-center gap-3 px-4 py-3">
+                  {entry.photo_url && (
+                    <img src={entry.photo_url} alt={entry.name}
+                      className="w-10 h-12 object-cover object-top shrink-0 border border-b-stone/30" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-body text-white text-sm">{entry.name}</p>
+                      <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 border"
+                        style={{ borderColor: srcColor, color: srcColor }}>
+                        {entry.source}
+                      </span>
+                      {entry.rating != null && (
+                        <span className="font-display text-sm" style={{ color: srcColor }}>
+                          {entry.rating}<span className="font-mono text-[9px] text-gray-600">/10</span>
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-mono text-[10px] text-gray-600 truncate">{preview || '(sem texto)'}</p>
+                  </div>
+
+                  {/* Aprovar depoimento */}
+                  <button onClick={() => toggleTestimonial(entry)}
+                    className={`font-mono text-[11px] uppercase px-2 py-1 border transition-all shrink-0 ${
+                      entry.testimonial_approved
+                        ? 'border-b-neon/60 text-b-neon bg-b-neon/10'
+                        : 'border-b-stone/40 text-gray-500 hover:border-b-neon hover:text-b-neon'
+                    }`}>
+                    {entry.testimonial_approved ? '★ Publicado' : '☆ Publicar'}
+                  </button>
+
+                  <button onClick={() => setExpanded(isOpen ? null : entry.id)}
+                    className="font-mono text-[11px] uppercase px-2 py-1 border border-b-stone/40 text-gray-400 hover:text-white shrink-0">
+                    {isOpen ? 'Fechar' : 'Ver tudo'}
+                  </button>
+                </div>
+
+                {/* Expanded details */}
+                {isOpen && (
+                  <div className="border-t border-b-stone/20 bg-b-dark/30 px-4 py-4 space-y-3">
+                    {entry.story && (
+                      <div>
+                        <p className="font-mono text-[10px] uppercase text-gray-500 mb-1">História</p>
+                        <p className="font-body text-gray-300 text-sm leading-relaxed">{entry.story}</p>
+                      </div>
+                    )}
+                    {entry.highlights && (
+                      <div>
+                        <p className="font-mono text-[10px] uppercase text-gray-500 mb-1">O que foi bom</p>
+                        <p className="font-body text-gray-300 text-sm leading-relaxed">{entry.highlights}</p>
+                      </div>
+                    )}
+                    {entry.improvement_points && (
+                      <div>
+                        <p className="font-mono text-[10px] uppercase text-gray-500 mb-1">Pontos de melhoria</p>
+                        <p className="font-body text-gray-300 text-sm leading-relaxed">{entry.improvement_points}</p>
+                      </div>
+                    )}
+                    {entry.suggestions && (
+                      <div>
+                        <p className="font-mono text-[10px] uppercase text-gray-500 mb-1">Sugestões</p>
+                        <p className="font-body text-gray-300 text-sm leading-relaxed">{entry.suggestions}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

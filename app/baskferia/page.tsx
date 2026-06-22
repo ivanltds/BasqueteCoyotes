@@ -10,6 +10,7 @@ import { getSupabasePublic } from '@/lib/supabase-server'
 import AudioPlayer from '@/components/AudioPlayer'
 import HeroBaskferiaButton from '@/components/HeroBaskferiaButton'
 import BaskferiaParticipantsSection from '@/components/BaskferiaParticipantsSection'
+import TestimonialsSection from '@/components/TestimonialsSection'
 
 export const metadata: Metadata = {
   title: 'Baskferia 2026 | O Maior Evento de Streetball da Zona Oeste de São Paulo',
@@ -303,6 +304,7 @@ export default async function Baskferia() {
       </section>
 
       <BaskferiaParticipantsSection />
+      <TestimonialsSection type="baskferia" />
 
       <AudioPlayer tracks={audioTracks} autoplay />
     </main>

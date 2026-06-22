@@ -10,6 +10,7 @@ export interface CarterinhaData {
   neighborhood: string
   city: string
   photo_url: string
+  role?: string
   // Coyotes member
   started_month?: number
   started_year?: number
@@ -32,7 +33,8 @@ export default function Carteirinha({ data, type, plain = false }: Props) {
   const bg        = isBask
     ? 'linear-gradient(135deg, #0D0D0D 0%, #1a1a0a 100%)'
     : 'linear-gradient(135deg, #161616 0%, #2a2a2a 100%)'
-  const subtitle  = isBask ? `${data.edition ?? 4}ª Edição · Participante` : 'Membro Oficial'
+  const roleLabel = data.role === 'organizador' ? 'Organizador' : 'Membro Oficial'
+  const subtitle  = isBask ? `${data.edition ?? 4}ª Edição · Participante` : roleLabel
   const teamLabel = isBask ? 'BASKFERIA' : 'COYOTES'
   const sinceLabel = !isBask && data.started_month && data.started_year
     ? `${MONTHS[(data.started_month - 1)]}/${data.started_year}`
