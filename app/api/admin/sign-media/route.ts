@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { isAuthenticated } from '@/lib/admin-auth'
 
-// Mapeamento seção → pasta Cloudinary
 const SECTION_FOLDERS: Record<string, string> = {
   hero_main:        'coyotes/hero/main',
   hero_main_mobile: 'coyotes/hero/main-mobile',
@@ -10,6 +9,7 @@ const SECTION_FOLDERS: Record<string, string> = {
   person_thiago:    'coyotes/team/thiago',
   person_ivan:      'coyotes/team/ivan',
   person_geovani:   'coyotes/team/geovani',
+  news_cover:       'coyotes/news',
 }
 
 export async function GET(req: NextRequest) {
@@ -31,11 +31,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Cloudinary não configurado.' }, { status: 500 })
   }
 
-  const timestamp     = Math.floor(Date.now() / 1000).toString()
-  const resource_type = 'auto'  // aceita imagem e vídeo — vai na URL, NÃO na assinatura
+  const timestamp = Math.floor(Date.now() / 1000).toString()
 
-  // Cloudinary: só assinar params do body (folder, timestamp, etc.)
-  // resource_type vai na URL path (/auto/upload), não é assinado
   const paramsToSign: Record<string, string> = { folder, timestamp }
   const str = Object.keys(paramsToSign)
     .sort()
@@ -53,6 +50,6 @@ export async function GET(req: NextRequest) {
     api_key:       apiKey,
     cloud_name:    cloudName,
     folder,
-    resource_type,
+    resource_type: 'auto',
   })
 }

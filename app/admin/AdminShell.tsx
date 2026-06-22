@@ -1187,7 +1187,7 @@ function TabNoticias() {
   async function handleCoverUpload(file: File) {
     setUploadingCover(true)
     try {
-      const sigRes = await fetch('/api/admin/sign-media?section=hero_main')
+      const sigRes = await fetch('/api/admin/sign-media?section=news_cover')
       const sig    = await sigRes.json()
 
       const fd = new FormData()
@@ -1195,7 +1195,7 @@ function TabNoticias() {
       fd.append('api_key',   sig.api_key)
       fd.append('timestamp', sig.timestamp)
       fd.append('signature', sig.signature)
-      fd.append('folder',    'coyotes/news')
+      fd.append('folder',    sig.folder)
 
       const up     = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloud_name}/image/upload`, { method: 'POST', body: fd })
       const upData = await up.json()
