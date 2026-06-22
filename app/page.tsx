@@ -143,6 +143,9 @@ export default async function Home() {
       {/* ── MARQUEE ── */}
       <MarqueeStrip />
 
+      {/* ── NOTÍCIAS ── */}
+      <NewsSection />
+
       {/* ── SOBRE ── */}
       <section id="sobre" className="py-24 px-6 md:px-20 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
@@ -375,8 +378,6 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ── NOTÍCIAS ── */}
-      <NewsSection />
 
       {/* ── GALERIA DINÂMICA ── */}
       <section id="galeria" className="py-24 px-6 md:px-20 max-w-7xl mx-auto scroll-mt-32">
