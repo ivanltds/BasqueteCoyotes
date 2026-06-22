@@ -34,9 +34,21 @@ interface SiteMediaItem {
 
 // ─── Shell principal ───────────────────────────────────────────────────────────
 
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'aprovacoes', label: 'Aprovações' },
+  { id: 'fotos',      label: 'Fotos'      },
+  { id: 'galerias',   label: 'Galerias'   },
+  { id: 'midia',      label: 'Mídia'      },
+  { id: 'audio',      label: 'Áudio'      },
+  { id: 'noticias',   label: 'Notícias'   },
+  { id: 'membros',    label: 'Membros'    },
+  { id: 'feedbacks',  label: 'Feedbacks'  },
+]
+
 export default function AdminShell() {
-  const router = useRouter()
-  const [tab, setTab] = useState<Tab>('aprovacoes')
+  const router  = useRouter()
+  const [tab, setTab]         = useState<Tab>('aprovacoes')
+  const [menuOpen, setMenuOpen] = useState(false)
 
   async function logout() {
     await fetch('/api/admin/logout', { method: 'POST' })
@@ -44,39 +56,48 @@ export default function AdminShell() {
     router.refresh()
   }
 
+  function selectTab(t: Tab) {
+    setTab(t)
+    setMenuOpen(false)
+  }
+
+  const currentLabel = TABS.find(t => t.id === tab)?.label ?? ''
+
   return (
     <main className="min-h-screen bg-b-dark text-white">
       {/* Header */}
-      <header className="border-b border-b-stone px-6 py-4 flex items-center justify-between">
+      <header className="border-b border-b-stone px-4 md:px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Image src="/images/logos/logo-coyotes.png" alt="Coyotes" width={32} height={32} className="opacity-70" />
           <span className="font-display text-xl uppercase tracking-widest">Admin</span>
         </div>
-
-        <button
-          onClick={logout}
-          className="font-mono text-xs uppercase text-gray-500 hover:text-red-400 transition-colors border border-b-stone hover:border-red-900 px-4 py-2"
-        >
-          Sair →
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={logout}
+            className="font-mono text-xs uppercase text-gray-500 hover:text-red-400 transition-colors border border-b-stone hover:border-red-900 px-4 py-2"
+          >
+            Sair →
+          </button>
+          {/* Hambúrguer — só mobile */}
+          <button
+            onClick={() => setMenuOpen(o => !o)}
+            className="md:hidden flex flex-col justify-center gap-1.5 w-8 h-8 p-1"
+            aria-label="Menu"
+          >
+            <span className={`block h-px bg-white transition-all duration-200 ${menuOpen ? 'rotate-45 translate-y-[5px]' : ''}`} />
+            <span className={`block h-px bg-white transition-all duration-200 ${menuOpen ? 'opacity-0' : ''}`} />
+            <span className={`block h-px bg-white transition-all duration-200 ${menuOpen ? '-rotate-45 -translate-y-[5px]' : ''}`} />
+          </button>
+        </div>
       </header>
 
-      {/* Abas */}
-      <div className="border-b border-b-stone px-6 flex gap-0">
-        {([
-          { id: 'aprovacoes', label: 'Aprovações' },
-          { id: 'fotos',      label: 'Fotos'      },
-          { id: 'galerias',   label: 'Galerias'   },
-          { id: 'midia',      label: 'Mídia'      },
-          { id: 'audio',      label: 'Áudio'      },
-          { id: 'noticias',   label: 'Notícias'   },
-          { id: 'membros',    label: 'Membros'    },
-          { id: 'feedbacks',  label: 'Feedbacks'  },
-        ] as { id: Tab; label: string }[]).map(t => (
+      {/* Abas desktop — ocultas em mobile */}
+      <div className="hidden md:flex border-b border-b-stone px-6 overflow-x-auto">
+        {TABS.map(t => (
           <button
             key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`font-display text-lg uppercase px-6 py-3 tracking-widest border-b-2 transition-all ${
+            onClick={() => selectTab(t.id)}
+            className={`font-display text-base uppercase px-5 py-3 tracking-widest border-b-2 whitespace-nowrap transition-all ${
               tab === t.id
                 ? 'border-b-orange text-b-orange'
                 : 'border-transparent text-gray-500 hover:text-white'
@@ -87,16 +108,43 @@ export default function AdminShell() {
         ))}
       </div>
 
+      {/* Menu mobile — dropdown */}
+      {menuOpen && (
+        <div className="md:hidden border-b border-b-stone bg-b-gray z-50">
+          {TABS.map(t => (
+            <button
+              key={t.id}
+              onClick={() => selectTab(t.id)}
+              className={`w-full text-left font-display text-base uppercase px-6 py-4 tracking-widest border-b border-b-stone/20 last:border-0 transition-colors ${
+                tab === t.id
+                  ? 'text-b-orange bg-b-orange/5'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              {tab === t.id && <span className="text-b-orange mr-2">▸</span>}
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Aba ativa — breadcrumb mobile */}
+      <div className="md:hidden px-4 py-2 border-b border-b-stone/20 flex items-center gap-2">
+        <span className="font-mono text-[10px] text-gray-600 uppercase tracking-widest">Admin</span>
+        <span className="font-mono text-[10px] text-gray-600">›</span>
+        <span className="font-mono text-[10px] text-b-orange uppercase tracking-widest">{currentLabel}</span>
+      </div>
+
       {/* Conteúdo */}
-      <div className="px-6 py-8 max-w-7xl mx-auto">
+      <div className="px-4 md:px-6 py-6 md:py-8 max-w-7xl mx-auto">
         {tab === 'aprovacoes' && <TabAprovacoes />}
         {tab === 'fotos'      && <TabFotos />}
         {tab === 'galerias'   && <TabGalerias />}
         {tab === 'midia'      && <TabMidia />}
         {tab === 'audio'      && <TabAudio />}
-        {tab === 'noticias'  && <TabNoticias />}
-        {tab === 'membros'   && <TabMembros />}
-        {tab === 'feedbacks' && <TabFeedbacks />}
+        {tab === 'noticias'   && <TabNoticias />}
+        {tab === 'membros'    && <TabMembros />}
+        {tab === 'feedbacks'  && <TabFeedbacks />}
       </div>
     </main>
   )
@@ -1742,6 +1790,89 @@ interface FeedbackEntry {
   created_at: string
 }
 
+// ─── helpers de stats ────────────────────────────────────────────────────────
+
+function avg(nums: number[]): number {
+  if (!nums.length) return 0
+  return Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) / 10
+}
+
+function dist(nums: number[]): number[] {
+  const d = Array(11).fill(0)
+  nums.forEach(n => { if (n >= 0 && n <= 10) d[n]++ })
+  return d
+}
+
+// ─── RatingChart ─────────────────────────────────────────────────────────────
+
+function RatingChart({ ratings, color, label }: { ratings: number[]; color: string; label: string }) {
+  const average  = avg(ratings)
+  const distData = dist(ratings)
+  const maxCount = Math.max(...distData, 1)
+
+  return (
+    <div className="bg-b-gray border border-b-stone/20 p-5 space-y-4 flex-1 min-w-0">
+      <div className="flex items-end justify-between">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-widest text-gray-500">{label}</p>
+          <p className="font-display text-5xl leading-none mt-1" style={{ color }}>
+            {ratings.length ? average : '—'}
+            {ratings.length > 0 && <span className="font-mono text-base text-gray-600">/10</span>}
+          </p>
+        </div>
+        <p className="font-mono text-xs text-gray-600">{ratings.length} nota{ratings.length !== 1 ? 's' : ''}</p>
+      </div>
+
+      {/* Distribuição 0–10 */}
+      <div className="space-y-1">
+        {distData.map((count, score) => (
+          <div key={score} className="flex items-center gap-2">
+            <span className="font-mono text-[10px] text-gray-600 w-4 text-right">{score}</span>
+            <div className="flex-1 h-3 bg-b-dark/60 overflow-hidden">
+              <div
+                className="h-full transition-all duration-500"
+                style={{ width: `${(count / maxCount) * 100}%`, background: color, opacity: count ? 1 : 0 }}
+              />
+            </div>
+            <span className="font-mono text-[10px] text-gray-600 w-4">{count || ''}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Mural ────────────────────────────────────────────────────────────────────
+
+function Mural({ items, color, title, icon }: { items: string[]; color: string; title: string; icon: string }) {
+  if (items.length === 0) return (
+    <div className="bg-b-gray border border-b-stone/20 p-5">
+      <p className="font-mono text-[10px] uppercase tracking-widest mb-3" style={{ color }}>{icon} {title}</p>
+      <p className="font-body text-gray-700 text-sm">Nenhuma resposta ainda.</p>
+    </div>
+  )
+
+  return (
+    <div className="bg-b-gray border border-b-stone/20 p-5">
+      <p className="font-mono text-[10px] uppercase tracking-widest mb-4" style={{ color }}>
+        {icon} {title} <span className="text-gray-600 ml-1">({items.length})</span>
+      </p>
+      <div className="flex flex-wrap gap-3">
+        {items.map((text, i) => (
+          <div key={i}
+            className="bg-b-dark/60 border px-4 py-3 text-sm font-body text-gray-300 leading-relaxed max-w-sm"
+            style={{ borderColor: color + '33' }}>
+            <span className="font-display text-xl mr-1" style={{ color }}>&ldquo;</span>
+            {text}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── TabFeedbacks ─────────────────────────────────────────────────────────────
+
 function TabFeedbacks() {
   const [feedback, setFeedback]   = useState<FeedbackEntry[]>([])
   const [loading, setLoading]     = useState(true)
@@ -1771,114 +1902,144 @@ function TabFeedbacks() {
 
   if (loading) return <Spinner />
 
+  const coyotesFeed  = feedback.filter(f => f.source === 'coyotes')
+  const baskferiaFeed= feedback.filter(f => f.source === 'baskferia')
+  const coyotesRatings  = coyotesFeed.filter(f => f.rating != null).map(f => f.rating as number)
+  const baskferiaRatings= baskferiaFeed.filter(f => f.rating != null).map(f => f.rating as number)
+
+  const improvements = feedback.filter(f => f.improvement_points?.trim()).map(f => f.improvement_points as string)
+  const suggestions  = feedback.filter(f => f.suggestions?.trim()).map(f => f.suggestions as string)
+
   const list = filter === 'all' ? feedback : feedback.filter(f => f.source === filter)
   const approvedCount = feedback.filter(f => f.testimonial_approved).length
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+
+      {/* ── Header ── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h3 className="font-display text-2xl uppercase text-white">Feedbacks</h3>
           <p className="font-mono text-xs text-gray-500 mt-1">
-            {feedback.length} resposta{feedback.length !== 1 ? 's' : ''} · {approvedCount} depoimento{approvedCount !== 1 ? 's' : ''} aprovado{approvedCount !== 1 ? 's' : ''}
+            {feedback.length} resposta{feedback.length !== 1 ? 's' : ''} · {approvedCount} depoimento{approvedCount !== 1 ? 's' : ''} publicado{approvedCount !== 1 ? 's' : ''}
           </p>
-        </div>
-        <div className="flex gap-2">
-          {([['all','Todos'], ['coyotes','Coyotes'], ['baskferia','Baskferia']] as const).map(([k, lbl]) => (
-            <button key={k} onClick={() => setFilter(k)}
-              className={`font-mono text-xs uppercase px-3 py-1.5 border transition-all ${
-                filter === k ? 'border-b-orange text-b-orange bg-b-orange/10' : 'border-b-stone/40 text-gray-500 hover:text-white'
-              }`}>
-              {lbl}
-            </button>
-          ))}
         </div>
       </div>
 
-      {list.length === 0 ? (
-        <p className="font-body text-gray-600">Nenhum feedback ainda.</p>
-      ) : (
-        <div className="space-y-3">
-          {list.map(entry => {
-            const isOpen   = expanded === entry.id
-            const srcColor = entry.source === 'baskferia' ? '#E0FF00' : '#FF5722'
-            const text     = entry.story || entry.highlights || ''
-            const preview  = text.length > 120 ? text.slice(0, 120) + '…' : text
+      {/* ── Gráficos de notas ── */}
+      <div>
+        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-3">// notas médias</p>
+        <div className="flex gap-4 flex-col sm:flex-row">
+          <RatingChart ratings={coyotesRatings} color="#FF5722" label="Coyotes — Treinos" />
+          <RatingChart ratings={baskferiaRatings} color="#E0FF00" label="Baskferia — Evento" />
+        </div>
+      </div>
 
-            return (
-              <div key={entry.id} className="bg-b-gray border border-b-stone/20">
-                {/* Header row */}
-                <div className="flex items-center gap-3 px-4 py-3">
-                  {entry.photo_url && (
-                    <img src={entry.photo_url} alt={entry.name}
-                      className="w-10 h-12 object-cover object-top shrink-0 border border-b-stone/30" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-body text-white text-sm">{entry.name}</p>
-                      <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 border"
-                        style={{ borderColor: srcColor, color: srcColor }}>
-                        {entry.source}
-                      </span>
-                      {entry.rating != null && (
-                        <span className="font-display text-sm" style={{ color: srcColor }}>
-                          {entry.rating}<span className="font-mono text-[9px] text-gray-600">/10</span>
+      {/* ── Mural de melhorias ── */}
+      <div>
+        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-3">// mural anônimo</p>
+        <div className="space-y-4">
+          <Mural items={improvements} color="#FF5722" title="Pontos de Melhoria" icon="△" />
+          <Mural items={suggestions}  color="#E0FF00" title="Sugestões"          icon="→" />
+        </div>
+      </div>
+
+      {/* ── Lista individual ── */}
+      <div>
+        <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-gray-500">// respostas individuais</p>
+          <div className="flex gap-2">
+            {([['all','Todos'], ['coyotes','Coyotes'], ['baskferia','Baskferia']] as const).map(([k, lbl]) => (
+              <button key={k} onClick={() => setFilter(k)}
+                className={`font-mono text-xs uppercase px-3 py-1.5 border transition-all ${
+                  filter === k ? 'border-b-orange text-b-orange bg-b-orange/10' : 'border-b-stone/40 text-gray-500 hover:text-white'
+                }`}>
+                {lbl}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {list.length === 0 ? (
+          <p className="font-body text-gray-600">Nenhum feedback ainda.</p>
+        ) : (
+          <div className="space-y-3">
+            {list.map(entry => {
+              const isOpen   = expanded === entry.id
+              const srcColor = entry.source === 'baskferia' ? '#E0FF00' : '#FF5722'
+              const text     = entry.story || entry.highlights || ''
+              const preview  = text.length > 120 ? text.slice(0, 120) + '…' : text
+
+              return (
+                <div key={entry.id} className="bg-b-gray border border-b-stone/20">
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    {entry.photo_url && (
+                      <img src={entry.photo_url} alt={entry.name}
+                        className="w-10 h-12 object-cover object-top shrink-0 border border-b-stone/30" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-body text-white text-sm">{entry.name}</p>
+                        <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 border"
+                          style={{ borderColor: srcColor, color: srcColor }}>
+                          {entry.source}
                         </span>
+                        {entry.rating != null && (
+                          <span className="font-display text-sm" style={{ color: srcColor }}>
+                            {entry.rating}<span className="font-mono text-[9px] text-gray-600">/10</span>
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-mono text-[10px] text-gray-600 truncate">{preview || '(sem texto)'}</p>
+                    </div>
+                    <button onClick={() => toggleTestimonial(entry)}
+                      className={`font-mono text-[11px] uppercase px-2 py-1 border transition-all shrink-0 ${
+                        entry.testimonial_approved
+                          ? 'border-b-neon/60 text-b-neon bg-b-neon/10'
+                          : 'border-b-stone/40 text-gray-500 hover:border-b-neon hover:text-b-neon'
+                      }`}>
+                      {entry.testimonial_approved ? '★ Publicado' : '☆ Publicar'}
+                    </button>
+                    <button onClick={() => setExpanded(isOpen ? null : entry.id)}
+                      className="font-mono text-[11px] uppercase px-2 py-1 border border-b-stone/40 text-gray-400 hover:text-white shrink-0">
+                      {isOpen ? 'Fechar' : 'Ver tudo'}
+                    </button>
+                  </div>
+
+                  {isOpen && (
+                    <div className="border-t border-b-stone/20 bg-b-dark/30 px-4 py-4 space-y-3">
+                      {entry.story && (
+                        <div>
+                          <p className="font-mono text-[10px] uppercase text-gray-500 mb-1">História</p>
+                          <p className="font-body text-gray-300 text-sm leading-relaxed">{entry.story}</p>
+                        </div>
+                      )}
+                      {entry.highlights && (
+                        <div>
+                          <p className="font-mono text-[10px] uppercase text-gray-500 mb-1">O que foi bom</p>
+                          <p className="font-body text-gray-300 text-sm leading-relaxed">{entry.highlights}</p>
+                        </div>
+                      )}
+                      {entry.improvement_points && (
+                        <div>
+                          <p className="font-mono text-[10px] uppercase text-gray-500 mb-1">Pontos de melhoria</p>
+                          <p className="font-body text-gray-300 text-sm leading-relaxed">{entry.improvement_points}</p>
+                        </div>
+                      )}
+                      {entry.suggestions && (
+                        <div>
+                          <p className="font-mono text-[10px] uppercase text-gray-500 mb-1">Sugestões</p>
+                          <p className="font-body text-gray-300 text-sm leading-relaxed">{entry.suggestions}</p>
+                        </div>
                       )}
                     </div>
-                    <p className="font-mono text-[10px] text-gray-600 truncate">{preview || '(sem texto)'}</p>
-                  </div>
-
-                  {/* Aprovar depoimento */}
-                  <button onClick={() => toggleTestimonial(entry)}
-                    className={`font-mono text-[11px] uppercase px-2 py-1 border transition-all shrink-0 ${
-                      entry.testimonial_approved
-                        ? 'border-b-neon/60 text-b-neon bg-b-neon/10'
-                        : 'border-b-stone/40 text-gray-500 hover:border-b-neon hover:text-b-neon'
-                    }`}>
-                    {entry.testimonial_approved ? '★ Publicado' : '☆ Publicar'}
-                  </button>
-
-                  <button onClick={() => setExpanded(isOpen ? null : entry.id)}
-                    className="font-mono text-[11px] uppercase px-2 py-1 border border-b-stone/40 text-gray-400 hover:text-white shrink-0">
-                    {isOpen ? 'Fechar' : 'Ver tudo'}
-                  </button>
+                  )}
                 </div>
-
-                {/* Expanded details */}
-                {isOpen && (
-                  <div className="border-t border-b-stone/20 bg-b-dark/30 px-4 py-4 space-y-3">
-                    {entry.story && (
-                      <div>
-                        <p className="font-mono text-[10px] uppercase text-gray-500 mb-1">História</p>
-                        <p className="font-body text-gray-300 text-sm leading-relaxed">{entry.story}</p>
-                      </div>
-                    )}
-                    {entry.highlights && (
-                      <div>
-                        <p className="font-mono text-[10px] uppercase text-gray-500 mb-1">O que foi bom</p>
-                        <p className="font-body text-gray-300 text-sm leading-relaxed">{entry.highlights}</p>
-                      </div>
-                    )}
-                    {entry.improvement_points && (
-                      <div>
-                        <p className="font-mono text-[10px] uppercase text-gray-500 mb-1">Pontos de melhoria</p>
-                        <p className="font-body text-gray-300 text-sm leading-relaxed">{entry.improvement_points}</p>
-                      </div>
-                    )}
-                    {entry.suggestions && (
-                      <div>
-                        <p className="font-mono text-[10px] uppercase text-gray-500 mb-1">Sugestões</p>
-                        <p className="font-body text-gray-300 text-sm leading-relaxed">{entry.suggestions}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
