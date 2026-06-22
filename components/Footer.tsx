@@ -74,6 +74,9 @@ export default function Footer() {
           <p className="font-mono text-gray-700 text-xs uppercase tracking-widest">
             © {year} @basquetecoyotes. Todos os direitos reservados.
           </p>
+          <Link href="/privacidade" className="font-mono text-gray-700 text-xs hover:text-gray-400 transition-colors underline">
+            Política de Privacidade
+          </Link>
           <p className="font-mono text-gray-700 text-xs">
             Zona Oeste · São Paulo · SP
           </p>

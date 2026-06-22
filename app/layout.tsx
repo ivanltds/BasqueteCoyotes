@@ -4,6 +4,8 @@ import SiteNav from '@/components/SiteNav'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { GoogleAnalytics } from '@next/third-parties/google'
+import { CookieConsentProvider } from '@/contexts/CookieConsentContext'
+import CookieBanner from '@/components/CookieBanner'
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://basquete-coyotes.vercel.app'),
@@ -56,12 +58,27 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
+      <head>
+        {/* gtag consent: nega analytics por padrão até o usuário aceitar */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('consent', 'default', { analytics_storage: 'denied' });
+            `,
+          }}
+        />
+      </head>
       <body>
-        <SiteNav>
-          {children}
-        </SiteNav>
-        <Analytics />
-        <SpeedInsights />
+        <CookieConsentProvider>
+          <SiteNav>
+            {children}
+          </SiteNav>
+          <CookieBanner />
+          <Analytics />
+          <SpeedInsights />
+        </CookieConsentProvider>
       </body>
       {process.env.NEXT_PUBLIC_GA_ID && (
         <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />

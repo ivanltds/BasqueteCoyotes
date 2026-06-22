@@ -299,7 +299,7 @@ export default async function Baskferia() {
         </div>
       </section>
 
-      <AudioPlayer tracks={audioTracks} />
+      <AudioPlayer tracks={audioTracks} autoplay />
     </main>
   )
 }
