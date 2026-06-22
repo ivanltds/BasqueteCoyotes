@@ -80,7 +80,7 @@ export default function Footer() {
           <p className="font-mono text-gray-700 text-xs">
             Zona Oeste · São Paulo · SP
           </p>
-          <Link href="/admin" className="font-mono text-[10px] text-gray-800 hover:text-gray-600 transition-colors">
+          <Link href="/admin" className="font-mono text-base text-gray-700 hover:text-gray-500 transition-colors">
             ⚙
           </Link>
         </div>
