@@ -21,7 +21,7 @@ interface Gallery {
   photo_count: number
 }
 
-type Tab = 'aprovacoes' | 'fotos' | 'galerias' | 'midia' | 'audio' | 'noticias'
+type Tab = 'aprovacoes' | 'fotos' | 'galerias' | 'midia' | 'audio' | 'noticias' | 'membros'
 
 interface SiteMediaItem {
   id: string
@@ -70,6 +70,7 @@ export default function AdminShell() {
           { id: 'midia',      label: 'Mídia'      },
           { id: 'audio',      label: 'Áudio'      },
           { id: 'noticias',   label: 'Notícias'   },
+          { id: 'membros',    label: 'Membros'    },
         ] as { id: Tab; label: string }[]).map(t => (
           <button
             key={t.id}
@@ -93,6 +94,7 @@ export default function AdminShell() {
         {tab === 'midia'      && <TabMidia />}
         {tab === 'audio'      && <TabAudio />}
         {tab === 'noticias'  && <TabNoticias />}
+        {tab === 'membros'   && <TabMembros />}
       </div>
     </main>
   )
@@ -1479,6 +1481,107 @@ function TabNoticias() {
                 Editar
               </button>
               <button onClick={() => handleDelete(item.id, item.title)}
+                className="font-mono text-[11px] uppercase px-2 py-1 border border-red-900/40 text-red-500 hover:text-red-300 hover:border-red-500 transition-all shrink-0">
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── TabMembros ──────────────────────────────────────────────────────────────
+
+interface MemberAdmin {
+  id: string
+  name: string
+  height: string
+  neighborhood: string
+  city: string
+  started_month: number
+  started_year: number
+  photo_url: string
+  approved: boolean
+  created_at: string
+}
+
+const MONTHS_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+
+function TabMembros() {
+  const [members, setMembers]   = useState<MemberAdmin[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [filter, setFilter]     = useState<'pending' | 'approved'>('pending')
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const { members: m } = await fetch('/api/admin/members').then(r => r.json())
+    setMembers(m ?? [])
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  async function handleApprove(id: string) {
+    await fetch(`/api/admin/members/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ approved: true }),
+    })
+    await load()
+  }
+
+  async function handleDelete(id: string, name: string) {
+    if (!confirm(`Excluir membro "${name}"?`)) return
+    await fetch(`/api/admin/members/${id}`, { method: 'DELETE' })
+    await load()
+  }
+
+  if (loading) return <Spinner />
+
+  const pending  = members.filter(m => !m.approved)
+  const approved = members.filter(m =>  m.approved)
+  const list     = filter === 'pending' ? pending : approved
+
+  return (
+    <div className="space-y-6">
+      {/* Tabs */}
+      <div className="flex gap-3">
+        {([['pending','Pendentes', pending.length], ['approved','Aprovados', approved.length]] as const).map(([k, label, count]) => (
+          <button key={k} onClick={() => setFilter(k)}
+            className={`font-mono text-xs uppercase px-4 py-2 border transition-all ${
+              filter === k
+                ? 'border-b-orange text-b-orange bg-b-orange/10'
+                : 'border-b-stone/40 text-gray-500 hover:text-white'
+            }`}>
+            {label} ({count})
+          </button>
+        ))}
+      </div>
+
+      {list.length === 0 ? (
+        <p className="font-body text-gray-600">{filter === 'pending' ? 'Nenhum cadastro pendente.' : 'Nenhum membro aprovado.'}</p>
+      ) : (
+        <div className="space-y-3">
+          {list.map(m => (
+            <div key={m.id} className="flex items-center gap-4 bg-b-gray border border-b-stone/20 px-4 py-3">
+              {m.photo_url && (
+                <img src={m.photo_url} alt={m.name} className="w-12 h-14 object-cover object-top shrink-0 border border-b-stone/30" />
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-body text-white">{m.name}</p>
+                <p className="font-mono text-[10px] text-gray-600 uppercase">
+                  {m.height} · {m.city} · {m.neighborhood} · desde {MONTHS_SHORT[m.started_month - 1]}/{m.started_year}
+                </p>
+              </div>
+              {!m.approved && (
+                <button onClick={() => handleApprove(m.id)}
+                  className="font-mono text-[11px] uppercase px-3 py-1 bg-b-neon/20 border border-b-neon/40 text-b-neon hover:bg-b-neon hover:text-b-dark transition-all shrink-0">
+                  Aprovar
+                </button>
+              )}
+              <button onClick={() => handleDelete(m.id, m.name)}
                 className="font-mono text-[11px] uppercase px-2 py-1 border border-red-900/40 text-red-500 hover:text-red-300 hover:border-red-500 transition-all shrink-0">
                 ✕
               </button>

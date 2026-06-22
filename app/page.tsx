@@ -8,6 +8,8 @@ import MarqueeStrip from '@/components/MarqueeStrip'
 import HeroSlideshow, { type SiteMedia } from '@/components/HeroSlideshow'
 import AudioPlayer from '@/components/AudioPlayer'
 import NewsSection from '@/components/NewsSection'
+import MatilhaSection from '@/components/MatilhaSection'
+import HeroJoinButton from '@/components/HeroJoinButton'
 import { getSupabasePublic } from '@/lib/supabase-server'
 import { getCloudinaryImages } from '@/lib/cloudinary'
 
@@ -118,12 +120,7 @@ export default async function Home() {
 
           {/* CTA */}
           <div className="animate-in animate-in-delay-3 flex flex-col sm:flex-row gap-4">
-            <a
-              href="#sobre"
-              className="font-display text-xl uppercase bg-b-orange text-b-dark px-8 py-4 tracking-wider shadow-brutal hover:shadow-none hover:translate-x-[6px] hover:translate-y-[6px] transition-all duration-150"
-            >
-              Junte-se à Matilha
-            </a>
+            <HeroJoinButton />
             <Link
               href="/baskferia"
               className="font-display text-xl uppercase border-2 border-b-neon text-b-neon px-8 py-4 tracking-wider hover:bg-b-neon hover:text-b-dark transition-colors duration-200"
@@ -145,6 +142,9 @@ export default async function Home() {
 
       {/* ── NOTÍCIAS ── */}
       <NewsSection />
+
+      {/* ── MATILHA ── */}
+      <MatilhaSection />
 
       {/* ── SOBRE ── */}
       <section id="sobre" className="py-24 px-6 md:px-20 max-w-7xl mx-auto">

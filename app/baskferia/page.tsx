@@ -8,6 +8,8 @@ import MarqueeStrip from '@/components/MarqueeStrip'
 import HeroSlideshow, { type SiteMedia } from '@/components/HeroSlideshow'
 import { getSupabasePublic } from '@/lib/supabase-server'
 import AudioPlayer from '@/components/AudioPlayer'
+import HeroBaskferiaButton from '@/components/HeroBaskferiaButton'
+import BaskferiaParticipantsSection from '@/components/BaskferiaParticipantsSection'
 
 export const metadata: Metadata = {
   title: 'Baskferia 2026 | O Maior Evento de Streetball da Zona Oeste de São Paulo',
@@ -149,6 +151,7 @@ export default async function Baskferia() {
             >
               Ver o Formato
             </a>
+            <HeroBaskferiaButton />
           </div>
         </div>
       </section>
@@ -298,6 +301,8 @@ export default async function Baskferia() {
           <InstaFeed profile="baskferia" />
         </div>
       </section>
+
+      <BaskferiaParticipantsSection />
 
       <AudioPlayer tracks={audioTracks} autoplay />
     </main>
