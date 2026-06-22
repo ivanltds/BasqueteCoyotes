@@ -5,7 +5,7 @@ export default async function MatilhaSection() {
   const sb = getSupabasePublic()
   const { data } = await sb
     .from('members')
-    .select('id, name, height, neighborhood, city, started_month, started_year, photo_url')
+    .select('id, name, height, neighborhood, city, started_month, started_year, photo_url, role')
     .eq('approved', true)
     .order('created_at', { ascending: true })
 
