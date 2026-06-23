@@ -10,6 +10,7 @@ import AudioPlayer from '@/components/AudioPlayer'
 import NewsSection from '@/components/NewsSection'
 import MatilhaSection from '@/components/MatilhaSection'
 import TestimonialsSection from '@/components/TestimonialsSection'
+import DepoimentoCTA from '@/components/DepoimentoCTA'
 import HeroJoinButton from '@/components/HeroJoinButton'
 import { getSupabasePublic } from '@/lib/supabase-server'
 import { getCloudinaryImages } from '@/lib/cloudinary'
@@ -147,6 +148,7 @@ export default async function Home() {
       {/* ── MATILHA ── */}
       <MatilhaSection />
       <TestimonialsSection type="coyotes" />
+      <DepoimentoCTA type="coyotes" />
 
       {/* ── SOBRE ── */}
       <section id="sobre" className="py-24 px-6 md:px-20 max-w-7xl mx-auto">

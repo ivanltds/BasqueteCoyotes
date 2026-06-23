@@ -11,6 +11,7 @@ import AudioPlayer from '@/components/AudioPlayer'
 import HeroBaskferiaButton from '@/components/HeroBaskferiaButton'
 import BaskferiaParticipantsSection from '@/components/BaskferiaParticipantsSection'
 import TestimonialsSection from '@/components/TestimonialsSection'
+import DepoimentoCTA from '@/components/DepoimentoCTA'
 
 export const metadata: Metadata = {
   title: 'Baskferia 2026 | O Maior Evento de Streetball da Zona Oeste de São Paulo',
@@ -305,6 +306,7 @@ export default async function Baskferia() {
 
       <BaskferiaParticipantsSection />
       <TestimonialsSection type="baskferia" />
+      <DepoimentoCTA type="baskferia" />
 
       <AudioPlayer tracks={audioTracks} autoplay />
     </main>
