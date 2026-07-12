@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 
@@ -21,7 +21,7 @@ interface Gallery {
   photo_count: number
 }
 
-type Tab = 'galeria' | 'midia' | 'noticias' | 'membros' | 'feedbacks'
+type Tab = 'galeria' | 'midia' | 'noticias' | 'membros' | 'apoiadores' | 'feedbacks'
 
 interface SiteMediaItem {
   id: string
@@ -39,6 +39,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'midia',     label: 'Mídia'     },
   { id: 'noticias',  label: 'Notícias'  },
   { id: 'membros',   label: 'Membros'   },
+  { id: 'apoiadores',label: 'Apoiadores'},
   { id: 'feedbacks', label: 'Feedbacks' },
 ]
 
@@ -138,6 +139,7 @@ export default function AdminShell() {
         {tab === 'midia'     && <TabMidiaCompleta />}
         {tab === 'noticias'  && <TabNoticias />}
         {tab === 'membros'   && <TabMembros />}
+        {tab === 'apoiadores'&& <TabApoiadores />}
         {tab === 'feedbacks' && <TabFeedbacks />}
       </div>
     </main>
@@ -2492,6 +2494,316 @@ function TabFeedbacks() {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// ─── TabApoiadores ─────────────────────────────────────────────────────────────
+
+interface SupporterAdmin {
+  id: string
+  name: string
+  photo_url: string
+  photo_public_id: string
+  link: string
+  clicks_count: number
+  created_at: string
+}
+
+function TabApoiadores() {
+  const [supporters, setSupporters] = useState<SupporterAdmin[]>([])
+  const [loading, setLoading] = useState(true)
+  const [modal, setModal] = useState<null | 'create' | { type: 'edit'; supporter: SupporterAdmin }>(null)
+  const [inputName, setInputName] = useState('')
+  const [inputLink, setInputLink] = useState('')
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [error, setError] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/admin/supporters')
+      const d = await res.json()
+      setSupporters(d.supporters ?? [])
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  function openCreate() {
+    setInputName('')
+    setInputLink('')
+    setPhotoFile(null)
+    setPhotoPreview(null)
+    setError('')
+    setModal('create')
+  }
+
+  function openEdit(s: SupporterAdmin) {
+    setInputName(s.name)
+    setInputLink(s.link)
+    setPhotoFile(null)
+    setPhotoPreview(s.photo_url)
+    setError('')
+    setModal({ type: 'edit', supporter: s })
+  }
+
+  function closeModal() {
+    setModal(null)
+  }
+
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPhotoFile(file)
+    const reader = new FileReader()
+    reader.onload = ev => setPhotoPreview(ev.target?.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  async function uploadPhoto(): Promise<{ url: string; public_id: string }> {
+    if (!photoFile) throw new Error('Selecione uma imagem.')
+    const sig = await fetch('/api/sign-public?section=member_photo').then(r => r.json())
+    const fd = new FormData()
+    fd.append('file', photoFile)
+    fd.append('api_key', sig.api_key)
+    fd.append('timestamp', sig.timestamp)
+    fd.append('signature', sig.signature)
+    fd.append('folder', sig.folder)
+    
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloud_name}/image/upload`, { method: 'POST', body: fd })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error?.message ?? 'Upload da imagem falhou.')
+    return { url: data.secure_url, public_id: data.public_id }
+  }
+
+  async function handleSave() {
+    if (!inputName.trim() || !inputLink.trim()) {
+      setError('Nome e link são obrigatórios.')
+      return
+    }
+
+    setSaving(true)
+    setError('')
+
+    let photo: { url: string; public_id: string } | null = null
+    if (photoFile) {
+      setUploadingPhoto(true)
+      try {
+        photo = await uploadPhoto()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Erro no upload.')
+        setUploadingPhoto(false)
+        setSaving(false)
+        return
+      }
+      setUploadingPhoto(false)
+    }
+
+    try {
+      const isEdit = modal !== 'create'
+      const s = isEdit ? (modal as { supporter: SupporterAdmin }).supporter : null
+
+      const body: Record<string, any> = {
+        name: inputName.trim(),
+        link: inputLink.trim(),
+      }
+
+      if (photo) {
+        body.photo_url = photo.url
+        body.photo_public_id = photo.public_id
+      } else if (!isEdit) {
+        setError('A imagem de logo é obrigatória para novos apoiadores.')
+        setSaving(false)
+        return
+      }
+
+      const url = isEdit ? `/api/admin/supporters/${s?.id}` : '/api/admin/supporters'
+      const method = isEdit ? 'PATCH' : 'POST'
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+
+      if (!res.ok) {
+        const d = await res.json()
+        throw new Error(d.error ?? 'Falha ao salvar.')
+      }
+
+      closeModal()
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao salvar apoiador.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete(s: SupporterAdmin) {
+    if (!confirm(`Excluir apoiador "${s.name}"?`)) return
+    try {
+      const res = await fetch(`/api/admin/supporters/${s.id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const d = await res.json()
+        throw new Error(d.error ?? 'Erro ao excluir.')
+      }
+      await load()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Erro ao excluir.')
+    }
+  }
+
+  if (loading) return <Spinner />
+
+  const isCreate = modal === 'create'
+  const isEdit = modal !== null && modal !== 'create'
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="font-display text-2xl uppercase text-white">
+          {supporters.length} apoiador{supporters.length !== 1 ? 'es' : ''}
+        </h3>
+        <button
+          onClick={openCreate}
+          className="bg-b-orange text-b-dark font-display text-sm uppercase px-5 py-2 tracking-widest shadow-brutal hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
+        >
+          + Novo Apoiador
+        </button>
+      </div>
+
+      {supporters.length === 0 ? (
+        <p className="font-body text-gray-600">Nenhum apoiador cadastrado.</p>
+      ) : (
+        <div className="space-y-3">
+          {supporters.map(s => (
+            <div key={s.id} className="bg-b-gray border border-b-stone/20 flex items-center gap-4 px-4 py-3">
+              {s.photo_url && (
+                <img
+                  src={s.photo_url}
+                  alt={s.name}
+                  className="w-14 h-14 object-cover border border-b-stone/30"
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-body text-white">{s.name}</p>
+                <a
+                  href={s.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-[10px] text-b-neon hover:underline truncate block"
+                >
+                  {s.link}
+                </a>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="font-mono text-xs text-gray-500 uppercase">Cliques</p>
+                <p className="font-display text-xl text-white leading-none mt-1">{s.clicks_count}</p>
+              </div>
+              <div className="flex gap-2 shrink-0 ml-4">
+                <button
+                  onClick={() => openEdit(s)}
+                  className="font-mono text-xs uppercase text-b-orange border border-b-stone px-3 py-1.5 hover:border-b-orange transition-colors"
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={() => handleDelete(s)}
+                  className="font-mono text-xs uppercase text-red-400 border border-b-stone px-3 py-1.5 hover:border-red-800 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal */}
+      {(isCreate || isEdit) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4" onClick={closeModal}>
+          <div className="bg-b-gray border-2 border-b-stone w-full max-w-md shadow-brutal" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-b-stone">
+              <h2 className="font-display text-2xl uppercase">
+                {isCreate ? 'Novo Apoiador' : 'Editar Apoiador'}
+              </h2>
+              <button onClick={closeModal} className="font-mono text-gray-500 hover:text-white text-xl">✕</button>
+            </div>
+            <div className="p-6 space-y-4">
+              {/* Preview Foto */}
+              <div>
+                <label className="font-mono text-xs uppercase text-gray-500 mb-2 block">Logo do Apoiador *</label>
+                <div
+                  className="relative aspect-square w-32 bg-b-dark border-2 border-dashed border-b-stone hover:border-b-orange flex items-center justify-center cursor-pointer overflow-hidden mx-auto"
+                  onClick={() => inputRef.current?.click()}
+                >
+                  {photoPreview ? (
+                    <img src={photoPreview} alt="Preview logo" className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <span className="font-mono text-[10px] text-gray-600 text-center uppercase p-2">Adicionar Foto</span>
+                  )}
+                </div>
+                <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+              </div>
+
+              {/* Campos */}
+              <label className="block">
+                <span className="font-mono text-xs uppercase text-gray-500 mb-1 block">Nome *</span>
+                <input
+                  type="text"
+                  value={inputName}
+                  onChange={e => setInputName(e.target.value)}
+                  placeholder="Nome do Apoiador"
+                  className="w-full bg-b-dark border-2 border-b-stone focus:border-b-orange p-3 font-body text-white outline-none transition-colors"
+                />
+              </label>
+
+              <label className="block">
+                <span className="font-mono text-xs uppercase text-gray-500 mb-1 block">Link *</span>
+                <input
+                  type="text"
+                  value={inputLink}
+                  onChange={e => setInputLink(e.target.value)}
+                  placeholder="https://exemplo.com"
+                  className="w-full bg-b-dark border-2 border-b-stone focus:border-b-orange p-3 font-mono text-sm text-white outline-none transition-colors"
+                />
+              </label>
+
+              {error && (
+                <p className="font-mono text-xs text-red-400 bg-red-950/30 border border-red-900 px-3 py-2">
+                  {error}
+                </p>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={closeModal}
+                  className="flex-1 border-2 border-b-stone text-gray-400 font-display text-lg uppercase py-3 tracking-widest hover:border-white/40 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving || uploadingPhoto}
+                  className="flex-1 bg-b-orange text-b-dark font-display text-lg uppercase py-3 tracking-widest shadow-brutal hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all disabled:opacity-50"
+                >
+                  {saving ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

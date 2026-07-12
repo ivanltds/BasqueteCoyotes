@@ -30,9 +30,10 @@ Centralizar a comunicação do time, gerenciar inscrições para eventos (Baskfe
 | lib/                        | Utilitários e SDK clients (ex: Cloudinary) |
 
 ## PRDs
-| ID  | Nome | Status   | Fase Atual |
-|-----|------|----------|------------|
-| —   | —    | —        | —          |
+| ID      | Nome                          | Status       | Fase Atual  |
+|---------|-------------------------------|--------------|-------------|
+| PRD-001 | Pré-Inscrição Baskferia 2026   | concluído    | DEV         |
+| PRD-002 | Seção de Apoiadores & Admin   | em-progresso | DESCOBERTA  |
 
 ## Arquivos Registrados
 | Arquivo                                    | Responsável | Descrição                |
@@ -47,9 +48,11 @@ Centralizar a comunicação do time, gerenciar inscrições para eventos (Baskfe
 | .gemini/agents/qa.md                       | Sistema     | QA                       |
 | .gemini/agents/devops.md                   | Sistema     | DevOps                   |
 | docs/contexto-projeto.md                   | Sistema     | Índice central           |
+| docs/prd/baskferia-prospecting-form.md     | Sistema     | PRD do formulário Baskferia |
+| docs/prd/apoiadores-secao.md               | Sistema     | PRD da seção de apoiadores |
 | README.md                                  | Sistema     | Documentação técnica     |
 
 ## Última Atualização
-- Data    : 2026-05-11
+- Data    : 2026-07-12
 - Por     : @maestro
-- Motivo  : Mapeamento inicial do contexto real do projeto
+- Motivo  : Registro dos PRDs de Prospecção e Seção de Apoiadores
