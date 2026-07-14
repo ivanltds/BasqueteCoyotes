@@ -13,6 +13,7 @@ import BaskferiaParticipantsSection from '@/components/BaskferiaParticipantsSect
 import TestimonialsSection from '@/components/TestimonialsSection'
 import DepoimentoCTA from '@/components/DepoimentoCTA'
 import BaskferiaTeamsSection from '@/components/BaskferiaTeamsSection'
+import BaskferiaRepresentativesSection from '@/components/BaskferiaRepresentativesSection'
 
 export const metadata: Metadata = {
   title: 'Baskferia 2026 | O Maior Evento de Streetball da Zona Oeste de São Paulo',
@@ -93,6 +94,20 @@ export default async function Baskferia() {
     .select('id, name, location, logo_url, team_photo_url, description_short, description_long')
     .order('name', { ascending: true })
   const teams = teamsData ?? []
+
+  const { data: repsData } = await sb
+    .from('representatives')
+    .select('id, name, modality, photo_url, link, teams(name)')
+    .order('name', { ascending: true })
+  
+  const representatives = (repsData ?? []).map((rep: any) => ({
+    id: rep.id,
+    name: rep.name,
+    modality: rep.modality,
+    photo_url: rep.photo_url,
+    link: rep.link,
+    team_name: rep.teams?.name ?? 'Sem time'
+  }))
 
   return (
     <main className="min-h-screen bg-b-dark text-white overflow-x-hidden">
@@ -206,6 +221,9 @@ export default async function Baskferia() {
 
       {/* ── TIMES PARTICIPANTES ── */}
       <BaskferiaTeamsSection teams={teams} />
+
+      {/* ── REPRESENTANTES ── */}
+      <BaskferiaRepresentativesSection representatives={representatives} />
 
       {/* ── FORMATO ── */}
       <section id="formato" className="py-24 bg-b-gray clip-diagonal-rev">
