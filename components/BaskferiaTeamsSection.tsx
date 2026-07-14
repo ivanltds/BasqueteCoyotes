@@ -58,11 +58,8 @@ export default function BaskferiaTeamsSection({ teams }: Props) {
                   <h3 className="font-display text-lg uppercase text-white group-hover:text-b-neon transition-colors truncate w-full mb-0.5">
                     {team.name}
                   </h3>
-                  <p className="font-mono text-[9px] text-gray-500 uppercase tracking-wider mb-2">
+                  <p className="font-mono text-[9px] text-gray-500 uppercase tracking-wider mb-1">
                     📍 {team.location}
-                  </p>
-                  <p className="font-body text-[10px] text-gray-400 line-clamp-2 leading-tight">
-                    {team.description_short}
                   </p>
                 </div>
               </button>
@@ -118,8 +115,15 @@ export default function BaskferiaTeamsSection({ teams }: Props) {
               </div>
 
               {/* História / Descrição Detalhada */}
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <h4 className="font-display text-lg uppercase text-b-orange tracking-widest">// história do time</h4>
+                
+                {/* Descrição curta com destaque brutalista */}
+                <p className="font-body text-base md:text-lg text-white font-bold leading-relaxed border-l-4 border-b-neon pl-4 py-1 bg-b-neon/5">
+                  {selectedTeam.description_short}
+                </p>
+
+                {/* História do time */}
                 <p className="font-body text-gray-300 text-sm md:text-base leading-relaxed whitespace-pre-wrap">
                   {selectedTeam.description_long}
                 </p>
