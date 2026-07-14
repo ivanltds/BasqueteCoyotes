@@ -43,7 +43,7 @@ export default function BaskferiaRepresentativesSection({ representatives }: Pro
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {representatives.map((rep) => {
               const CardContent = (
-                <div className="h-full flex flex-col justify-between p-4 bg-b-gray border-2 border-b-stone group-hover:border-b-neon transition-all shadow-brutal-org group-hover:shadow-none group-hover:translate-x-1 group-hover:translate-y-1">
+                <div className="flex flex-col justify-between p-4 bg-b-gray border-2 border-b-stone group-hover:border-b-neon transition-all shadow-brutal-org group-hover:shadow-none group-hover:translate-x-1 group-hover:translate-y-1 h-full">
                   {/* Foto do Jogador */}
                   <div className="relative aspect-[3/4] w-full bg-b-dark overflow-hidden border border-b-stone/30 mb-3 shrink-0">
                     <img
@@ -75,7 +75,7 @@ export default function BaskferiaRepresentativesSection({ representatives }: Pro
                     href={rep.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group block aspect-[3/4] outline-none"
+                    className="group block outline-none h-full"
                   >
                     {CardContent}
                   </a>
@@ -83,7 +83,7 @@ export default function BaskferiaRepresentativesSection({ representatives }: Pro
               }
 
               return (
-                <div key={rep.id} className="group aspect-[3/4]">
+                <div key={rep.id} className="group h-full">
                   {CardContent}
                 </div>
               )
