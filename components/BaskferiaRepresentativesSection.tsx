@@ -61,7 +61,7 @@ export default function BaskferiaRepresentativesSection({ representatives }: Pro
                       className="absolute inset-0 w-full h-full object-cover"
                     />
                     {rep.team_logo_url && (
-                      <div className="absolute top-2 right-2 w-8 h-8 md:w-9 md:h-9 bg-b-dark/80 p-1 border border-b-stone/30 rounded flex items-center justify-center backdrop-blur-sm opacity-60 group-hover:opacity-90 transition-opacity">
+                      <div className="absolute top-2 right-2 w-11 h-11 md:w-14 md:h-14 bg-b-dark/80 p-1 border border-b-stone/30 rounded flex items-center justify-center backdrop-blur-sm opacity-60 group-hover:opacity-90 transition-opacity">
                         <img
                           src={rep.team_logo_url}
                           alt="Time"

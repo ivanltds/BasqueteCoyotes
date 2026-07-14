@@ -90,7 +90,7 @@ export default function BaskferiaTournamentsSection({ initialTournaments }: Prop
   function renderCompetidor(comp: Competidor | null, score: number | null, isWinner: boolean) {
     if (!comp) {
       return (
-        <div className="flex items-center justify-between bg-b-dark/40 border border-dashed border-b-stone/20 p-3 h-16">
+        <div className="flex items-center justify-between bg-b-dark/40 border border-dashed border-b-stone/20 p-3 h-20">
           <span className="font-mono text-xs text-gray-600 uppercase tracking-widest">// em breve</span>
         </div>
       )
@@ -100,7 +100,7 @@ export default function BaskferiaTournamentsSection({ initialTournaments }: Prop
 
     return (
       <div 
-        className={`flex items-center justify-between p-3 h-16 border transition-colors ${
+        className={`flex items-center justify-between p-3 h-20 border transition-colors ${
           hasLost 
             ? 'bg-b-dark/20 border-b-stone/20 grayscale opacity-45' 
             : isWinner
@@ -110,14 +110,14 @@ export default function BaskferiaTournamentsSection({ initialTournaments }: Prop
       >
         <div className="flex items-center gap-2 min-w-0">
           {comp.photo_url ? (
-            <div className="relative w-12 h-12 shrink-0">
+            <div className="relative w-16 h-16 shrink-0">
               <img 
                 src={comp.photo_url} 
                 alt={comp.name} 
                 className="w-full h-full object-cover border border-b-stone/20 rounded" 
               />
               {comp.team_logo_url && (
-                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-b-dark/90 p-0.5 rounded border border-b-stone/30 flex items-center justify-center">
+                <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-b-dark/90 p-0.5 rounded border border-b-stone/30 flex items-center justify-center">
                   <img 
                     src={comp.team_logo_url} 
                     alt="Time" 
@@ -130,7 +130,7 @@ export default function BaskferiaTournamentsSection({ initialTournaments }: Prop
             <img 
               src={comp.team_logo_url} 
               alt={comp.name} 
-              className="w-12 h-12 object-contain shrink-0" 
+              className="w-16 h-16 object-contain shrink-0" 
             />
           ) : null}
           <div className="min-w-0 leading-tight">
@@ -239,14 +239,14 @@ export default function BaskferiaTournamentsSection({ initialTournaments }: Prop
                       {/* Competidor */}
                       <div className="col-span-7 flex items-center gap-3">
                         {item.photo_url ? (
-                          <div className="relative w-14 h-14 shrink-0">
+                          <div className="relative w-20 h-20 shrink-0">
                             <img 
                               src={item.photo_url} 
                               alt={item.name} 
                               className="w-full h-full object-cover border border-b-stone/20 rounded" 
                             />
                             {item.team_logo_url && (
-                              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-b-dark/95 p-0.5 rounded border border-b-stone/30 flex items-center justify-center">
+                              <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-b-dark/95 p-0.5 rounded border border-b-stone/30 flex items-center justify-center">
                                 <img 
                                   src={item.team_logo_url} 
                                   alt="Time" 
@@ -259,7 +259,7 @@ export default function BaskferiaTournamentsSection({ initialTournaments }: Prop
                           <img 
                             src={item.team_logo_url} 
                             alt={item.name} 
-                            className="w-14 h-14 object-contain shrink-0" 
+                            className="w-20 h-20 object-contain shrink-0" 
                           />
                         ) : null}
                         <div>
