@@ -21,7 +21,7 @@ interface Gallery {
   photo_count: number
 }
 
-type Tab = 'galeria' | 'midia' | 'noticias' | 'membros' | 'apoiadores' | 'times' | 'representantes' | 'feedbacks'
+type Tab = 'galeria' | 'midia' | 'noticias' | 'membros' | 'apoiadores' | 'times' | 'representantes' | 'torneios' | 'feedbacks'
 
 interface SiteMediaItem {
   id: string
@@ -42,6 +42,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'apoiadores',label: 'Apoiadores'},
   { id: 'times',     label: 'Times'     },
   { id: 'representantes', label: 'Representantes' },
+  { id: 'torneios',  label: 'Torneios'  },
   { id: 'feedbacks', label: 'Feedbacks' },
 ]
 
@@ -144,6 +145,7 @@ export default function AdminShell() {
         {tab === 'apoiadores'&& <TabApoiadores />}
         {tab === 'times'     && <TabTimes />}
         {tab === 'representantes' && <TabRepresentantes />}
+        {tab === 'torneios'  && <TabTorneios />}
         {tab === 'feedbacks' && <TabFeedbacks />}
       </div>
     </main>
@@ -3580,3 +3582,663 @@ function TabRepresentantes() {
     </div>
   )
 }
+
+// ─── TabTorneios ──────────────────────────────────────────────────────────────
+
+interface TournamentAdmin {
+  id: string
+  name: string
+  is_active: boolean
+  format: 'bracket' | 'ranking'
+}
+
+interface MatchAdmin {
+  id: string
+  match_number: number
+  stage: 'quarterfinals' | 'semifinals' | 'final'
+  team_id_1: string | null
+  team_id_2: string | null
+  representative_id_1: string | null
+  representative_id_2: string | null
+  score_1: number | null
+  score_2: number | null
+  team_1?: TeamAdmin | null
+  team_2?: TeamAdmin | null
+  rep_1?: RepresentativeAdmin | null
+  rep_2?: RepresentativeAdmin | null
+}
+
+interface RankingAdmin {
+  id: string
+  tournament_id: string
+  team_id: string | null
+  representative_id: string | null
+  score: number
+  teams?: TeamAdmin | null
+  representatives?: RepresentativeAdmin | null
+}
+
+function TabTorneios() {
+  const [tournaments, setTournaments] = useState<TournamentAdmin[]>([])
+  const [loading, setLoading] = useState(true)
+  
+  const [selectedTourId, setSelectedTourId] = useState<string>('')
+  const [subTab, setSubTab] = useState<'config' | 'data'>('config')
+
+  const [matches, setMatches] = useState<MatchAdmin[]>([])
+  const [rankings, setRankings] = useState<RankingAdmin[]>([])
+  const [teams, setTeams] = useState<TeamAdmin[]>([])
+  const [reps, setReps] = useState<RepresentativeAdmin[]>([])
+
+  // Modal de partida
+  const [editingMatch, setEditingMatch] = useState<MatchAdmin | null>(null)
+  const [inputComp1Id, setInputComp1Id] = useState('')
+  const [inputComp2Id, setInputComp2Id] = useState('')
+  const [inputScore1, setInputScore1] = useState<string>('')
+  const [inputScore2, setInputScore2] = useState<string>('')
+
+  // Modal de ranking
+  const [rankingModal, setRankingModal] = useState<null | 'create' | { type: 'edit'; item: RankingAdmin }>(null)
+  const [inputRankCompId, setInputRankCompId] = useState('')
+  const [inputRankScore, setInputRankScore] = useState<string>('')
+
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [tRes, teamsRes, repsRes] = await Promise.all([
+        fetch('/api/admin/tournaments'),
+        fetch('/api/admin/teams'),
+        fetch('/api/admin/representatives')
+      ])
+      const tData = await tRes.json()
+      const teamsData = await teamsRes.json()
+      const repsData = await repsRes.json()
+
+      setTournaments(tData.tournaments ?? [])
+      setTeams(teamsData.teams ?? [])
+      setReps(repsData.representatives ?? [])
+
+      if (tData.tournaments?.length > 0 && !selectedTourId) {
+        setSelectedTourId(tData.tournaments[0].id)
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }, [selectedTourId])
+
+  const loadTournamentData = useCallback(async () => {
+    if (!selectedTourId) return
+    const tour = tournaments.find(t => t.id === selectedTourId)
+    if (!tour) return
+
+    try {
+      if (tour.format === 'ranking') {
+        const res = await fetch(`/api/admin/rankings?tournament_id=${selectedTourId}`)
+        const d = await res.json()
+        setRankings(d.rankings ?? [])
+        setMatches([])
+      } else {
+        const res = await fetch(`/api/admin/matches?tournament_id=${selectedTourId}`)
+        const d = await res.json()
+        setMatches(d.matches ?? [])
+        setRankings([])
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }, [selectedTourId, tournaments])
+
+  useEffect(() => { loadData() }, [])
+
+  useEffect(() => { loadTournamentData() }, [selectedTourId, tournaments, loadTournamentData])
+
+  async function handleToggleActive(tour: TournamentAdmin) {
+    try {
+      const res = await fetch(`/api/admin/tournaments/${tour.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: !tour.is_active })
+      })
+      if (res.ok) await loadData()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  async function handleFormatChange(tour: TournamentAdmin, format: 'bracket' | 'ranking') {
+    try {
+      const res = await fetch(`/api/admin/tournaments/${tour.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ format })
+      })
+      if (res.ok) await loadData()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  // --- CONTROLE DE PARTIDAS (BRACKETS) ---
+  function openEditMatch(m: MatchAdmin) {
+    setEditingMatch(m)
+    setInputComp1Id(m.team_id_1 || m.representative_id_1 || '')
+    setInputComp2Id(m.team_id_2 || m.representative_id_2 || '')
+    setInputScore1(m.score_1 !== null ? String(m.score_1) : '')
+    setInputScore2(m.score_2 !== null ? String(m.score_2) : '')
+    setError('')
+  }
+
+  async function handleSaveMatch() {
+    if (!editingMatch) return
+    setSaving(true)
+    setError('')
+
+    const isTimes = selectedTourId === '5x5'
+    const payload: Record<string, any> = {
+      score_1: inputScore1 !== '' ? Number(inputScore1) : null,
+      score_2: inputScore2 !== '' ? Number(inputScore2) : null,
+    }
+
+    if (isTimes) {
+      payload.team_id_1 = inputComp1Id || null
+      payload.team_id_2 = inputComp2Id || null
+    } else {
+      payload.representative_id_1 = inputComp1Id || null
+      payload.representative_id_2 = inputComp2Id || null
+    }
+
+    try {
+      const res = await fetch(`/api/admin/matches/${editingMatch.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error ?? 'Falha ao salvar partida.')
+      }
+
+      setEditingMatch(null)
+      await loadTournamentData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao salvar.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // --- CONTROLE DE PONTUAÇÕES (RANKINGS) ---
+  function openCreateRank() {
+    const isTimes = selectedTourId === '5x5'
+    setInputRankCompId(isTimes ? teams[0]?.id || '' : reps[0]?.id || '')
+    setInputRankScore('0')
+    setError('')
+    setRankingModal('create')
+  }
+
+  function openEditRank(item: RankingAdmin) {
+    setInputRankCompId(item.team_id || item.representative_id || '')
+    setInputRankScore(String(item.score))
+    setError('')
+    setRankingModal({ type: 'edit', item })
+  }
+
+  async function handleSaveRank() {
+    if (!inputRankCompId) {
+      setError('Selecione um competidor.')
+      return
+    }
+
+    setSaving(true)
+    setError('')
+
+    const isTimes = selectedTourId === '5x5'
+    const isEdit = rankingModal !== 'create'
+    const item = isEdit ? (rankingModal as { item: RankingAdmin }).item : null
+
+    const payload: Record<string, any> = {
+      score: Number(inputRankScore) || 0
+    }
+
+    if (!isEdit) {
+      payload.tournament_id = selectedTourId
+      if (isTimes) {
+        payload.team_id = inputRankCompId
+      } else {
+        payload.representative_id = inputRankCompId
+      }
+    }
+
+    try {
+      const url = isEdit ? `/api/admin/rankings/${item?.id}` : '/api/admin/rankings'
+      const method = isEdit ? 'PATCH' : 'POST'
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error ?? 'Erro ao salvar.')
+      }
+
+      setRankingModal(null)
+      await loadTournamentData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao salvar.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDeleteRank(id: string) {
+    if (!confirm('Remover competidor do ranking?')) return
+    try {
+      const res = await fetch(`/api/admin/rankings/${id}`, { method: 'DELETE' })
+      if (res.ok) await loadTournamentData()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  if (loading) return <Spinner />
+
+  const tour = tournaments.find(t => t.id === selectedTourId)
+  const isTimes = selectedTourId === '5x5'
+  const isCreateRank = rankingModal === 'create'
+
+  return (
+    <div className="space-y-6">
+      
+      {/* Seleção do Torneio */}
+      <div className="flex flex-wrap gap-2 border-b border-b-stone/20 pb-4">
+        {tournaments.map(t => (
+          <button
+            key={t.id}
+            onClick={() => { setSelectedTourId(t.id); setSubTab('config'); }}
+            className={`font-display text-sm uppercase px-5 py-2.5 border tracking-wider transition-all ${
+              selectedTourId === t.id
+                ? 'bg-b-orange text-b-dark border-b-orange'
+                : 'bg-b-gray text-gray-400 border-b-stone/20 hover:text-white'
+            }`}
+          >
+            {t.name}
+          </button>
+        ))}
+      </div>
+
+      {tour && (
+        <div className="space-y-6 bg-b-gray/30 p-6 border border-b-stone/20">
+          
+          {/* Sub Tab de Configuração e Dados */}
+          <div className="flex gap-4 border-b border-b-stone/10 pb-3">
+            <button
+              onClick={() => setSubTab('config')}
+              className={`font-mono text-xs uppercase tracking-widest pb-1 border-b-2 ${
+                subTab === 'config'
+                  ? 'border-b-neon text-b-neon'
+                  : 'border-b-transparent text-gray-500 hover:text-white'
+              }`}
+            >
+              Configuração
+            </button>
+            <button
+              onClick={() => setSubTab('data')}
+              className={`font-mono text-xs uppercase tracking-widest pb-1 border-b-2 ${
+                subTab === 'data'
+                  ? 'border-b-neon text-b-neon'
+                  : 'border-b-transparent text-gray-500 hover:text-white'
+              }`}
+            >
+              {tour.format === 'ranking' ? 'Tabela (Ranking)' : 'Chaves (Confrontos)'}
+            </button>
+          </div>
+
+          {/* ABA SUB: CONFIGURAÇÃO */}
+          {subTab === 'config' && (
+            <div className="space-y-6 max-w-md">
+              <div className="flex items-center justify-between bg-b-gray p-4 border border-b-stone/20">
+                <div>
+                  <p className="font-body text-white font-bold">Status do Torneio</p>
+                  <p className="font-mono text-[10px] text-gray-500 uppercase mt-0.5">
+                    {tour.is_active ? 'Ativo - Visível no site' : 'Inativo - Oculto do público'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleToggleActive(tour)}
+                  className={`font-mono text-xs uppercase px-4 py-2 border ${
+                    tour.is_active
+                      ? 'border-red-800 text-red-400 hover:bg-red-950/20'
+                      : 'border-b-neon text-b-neon hover:bg-b-neon/10'
+                  }`}
+                >
+                  {tour.is_active ? 'Desativar' : 'Ativar'}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between bg-b-gray p-4 border border-b-stone/20">
+                <div>
+                  <p className="font-body text-white font-bold">Formato de Competição</p>
+                  <p className="font-mono text-[10px] text-gray-500 uppercase mt-0.5">
+                    {tour.format === 'ranking' ? 'Ranking (Por pontos)' : 'Chaveamento (Bracket eliminatório)'}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    disabled={tour.format === 'bracket'}
+                    onClick={() => handleFormatChange(tour, 'bracket')}
+                    className="font-mono text-[10px] uppercase border border-b-stone/30 px-3 py-1.5 hover:border-white disabled:bg-b-neon disabled:text-b-dark disabled:border-b-neon"
+                  >
+                    Chaves
+                  </button>
+                  <button
+                    disabled={tour.format === 'ranking'}
+                    onClick={() => handleFormatChange(tour, 'ranking')}
+                    className="font-mono text-[10px] uppercase border border-b-stone/30 px-3 py-1.5 hover:border-white disabled:bg-b-neon disabled:text-b-dark disabled:border-b-neon"
+                  >
+                    Ranking
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ABA SUB: DADOS (CHAVES ELIMINATÓRIAS) */}
+          {subTab === 'data' && tour.format === 'bracket' && (
+            <div className="space-y-4">
+              <div className="border-l-4 border-b-orange bg-b-orange/5 p-4 mb-4 text-xs font-mono text-gray-400">
+                🐾 <strong>Como funciona:</strong> Defina os competidores nas <strong>Quartas de Final</strong> (Jogos 1 a 4). Ao preencher os placares, o vencedor avança automaticamente para as Semifinais (Jogos 5 e 6) e Final (Jogo 7). Empates são impedidos.
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {matches.map(m => {
+                  const comp1Name = isTimes ? m.team_1?.name : m.rep_1?.name
+                  const comp2Name = isTimes ? m.team_2?.name : m.rep_2?.name
+
+                  return (
+                    <div key={m.id} className="bg-b-gray border border-b-stone/20 p-4 space-y-3">
+                      <div className="flex justify-between items-center border-b border-b-stone/10 pb-2">
+                        <span className="font-mono text-[10px] text-gray-500 uppercase tracking-widest">
+                          Jogo {m.match_number} · {m.stage === 'quarterfinals' ? 'Quartas' : m.stage === 'semifinals' ? 'Semi' : 'Final'}
+                        </span>
+                        <button
+                          onClick={() => openEditMatch(m)}
+                          className="font-mono text-xs text-b-neon hover:underline"
+                        >
+                          Editar
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className={m.score_1 !== null && m.score_2 !== null && m.score_1 < m.score_2 ? 'text-gray-500' : 'text-white'}>
+                            🛡️ {comp1Name || 'Em breve'}
+                          </span>
+                          <span className="font-display font-bold">
+                            {m.score_1 !== null ? m.score_1 : '-'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className={m.score_1 !== null && m.score_2 !== null && m.score_2 < m.score_1 ? 'text-gray-500' : 'text-white'}>
+                            🛡️ {comp2Name || 'Em breve'}
+                          </span>
+                          <span className="font-display font-bold">
+                            {m.score_2 !== null ? m.score_2 : '-'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ABA SUB: DADOS (TABELA RANKING) */}
+          {subTab === 'data' && tour.format === 'ranking' && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h4 className="font-display text-lg uppercase text-white">Classificados por Pontos</h4>
+                <button
+                  onClick={openCreateRank}
+                  className="bg-b-neon text-b-dark font-display text-xs uppercase px-4 py-2 tracking-wider"
+                >
+                  + Competidor
+                </button>
+              </div>
+
+              {rankings.length === 0 ? (
+                <p className="font-body text-gray-600">Nenhum competidor pontuou.</p>
+              ) : (
+                <div className="space-y-2">
+                  {rankings.map((r, idx) => {
+                    const compName = isTimes ? r.teams?.name : r.representatives?.name
+                    const teamName = isTimes ? '' : r.representatives?.teams?.name
+
+                    return (
+                      <div key={r.id} className="bg-b-gray border border-b-stone/20 flex items-center justify-between px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <span className="font-display text-xl text-gray-500 w-8">{idx + 1}º</span>
+                          <div>
+                            <p className="font-body text-white font-bold">{compName || 'Excluído'}</p>
+                            {teamName && <span className="font-mono text-[9px] text-gray-500 uppercase">🛡️ {teamName}</span>}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-6">
+                          <span className="font-display text-2xl text-b-orange">{r.score} pts</span>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => openEditRank(r)}
+                              className="font-mono text-xs uppercase text-b-orange border border-b-stone/30 px-3 py-1 hover:border-b-orange"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => handleDeleteRank(r.id)}
+                              className="font-mono text-xs uppercase text-red-400 border border-b-stone/30 px-3 py-1 hover:border-red-800"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+        </div>
+      )}
+
+      {/* MODAL: EDITAR PARTIDA */}
+      {editingMatch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4" onClick={() => setEditingMatch(null)}>
+          <div className="bg-b-gray border-2 border-b-stone w-full max-w-md shadow-brutal" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-b-stone">
+              <h2 className="font-display text-2xl uppercase">Jogo {editingMatch.match_number}</h2>
+              <button onClick={() => setEditingMatch(null)} className="font-mono text-gray-500 hover:text-white text-xl">✕</button>
+            </div>
+            <div className="p-6 space-y-4">
+              
+              {/* Seleção do competidor 1 */}
+              <div>
+                <label className="font-mono text-xs uppercase text-gray-500 mb-1 block">Competidor 1 (Time/Atleta)</label>
+                {editingMatch.stage === 'quarterfinals' ? (
+                  <select
+                    value={inputComp1Id}
+                    onChange={e => setInputComp1Id(e.target.value)}
+                    className="w-full bg-b-dark border-2 border-b-stone focus:border-b-orange p-3 font-body text-white outline-none appearance-none"
+                  >
+                    <option value="">-- Selecione o competidor --</option>
+                    {isTimes ? (
+                      teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)
+                    ) : (
+                      reps.map(r => <option key={r.id} value={r.id}>{r.name} ({r.teams?.name})</option>)
+                    )}
+                  </select>
+                ) : (
+                  <div className="bg-b-dark border border-b-stone/20 p-3 font-body text-gray-500">
+                    Definido automaticamente por jogo anterior
+                  </div>
+                )}
+              </div>
+
+              {/* Pontuação competidor 1 */}
+              <label className="block">
+                <span className="font-mono text-xs uppercase text-gray-500 mb-1 block">Pontuação Competidor 1</span>
+                <input
+                  type="number"
+                  value={inputScore1}
+                  onChange={e => setInputScore1(e.target.value)}
+                  placeholder="Placar ou vazio"
+                  className="w-full bg-b-dark border-2 border-b-stone focus:border-b-orange p-3 font-body text-white outline-none"
+                />
+              </label>
+
+              {/* Seleção do competidor 2 */}
+              <div className="pt-2 border-t border-t-stone/10">
+                <label className="font-mono text-xs uppercase text-gray-500 mb-1 block">Competidor 2 (Time/Atleta)</label>
+                {editingMatch.stage === 'quarterfinals' ? (
+                  <select
+                    value={inputComp2Id}
+                    onChange={e => setInputComp2Id(e.target.value)}
+                    className="w-full bg-b-dark border-2 border-b-stone focus:border-b-orange p-3 font-body text-white outline-none appearance-none"
+                  >
+                    <option value="">-- Selecione o competidor --</option>
+                    {isTimes ? (
+                      teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)
+                    ) : (
+                      reps.map(r => <option key={r.id} value={r.id}>{r.name} ({r.teams?.name})</option>)
+                    )}
+                  </select>
+                ) : (
+                  <div className="bg-b-dark border border-b-stone/20 p-3 font-body text-gray-500">
+                    Definido automaticamente por jogo anterior
+                  </div>
+                )}
+              </div>
+
+              {/* Pontuação competidor 2 */}
+              <label className="block">
+                <span className="font-mono text-xs uppercase text-gray-500 mb-1 block">Pontuação Competidor 2</span>
+                <input
+                  type="number"
+                  value={inputScore2}
+                  onChange={e => setInputScore2(e.target.value)}
+                  placeholder="Placar ou vazio"
+                  className="w-full bg-b-dark border-2 border-b-stone focus:border-b-orange p-3 font-body text-white outline-none"
+                />
+              </label>
+
+              {error && (
+                <p className="font-mono text-xs text-red-400 bg-red-950/30 border border-red-900 px-3 py-2">
+                  {error}
+                </p>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setEditingMatch(null)}
+                  className="flex-1 border-2 border-b-stone text-gray-400 font-display text-lg uppercase py-3 tracking-widest hover:border-white/40 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveMatch}
+                  disabled={saving}
+                  className="flex-1 bg-b-orange text-b-dark font-display text-lg uppercase py-3 tracking-widest shadow-brutal hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
+                >
+                  {saving ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CADASTRO/EDIÇÃO RANKING */}
+      {rankingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4" onClick={() => setRankingModal(null)}>
+          <div className="bg-b-gray border-2 border-b-stone w-full max-w-md shadow-brutal my-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-b-stone">
+              <h2 className="font-display text-2xl uppercase">
+                {isCreateRank ? 'Adicionar ao Ranking' : 'Editar Pontuação'}
+              </h2>
+              <button onClick={() => setRankingModal(null)} className="font-mono text-gray-500 hover:text-white text-xl">✕</button>
+            </div>
+            <div className="p-6 space-y-4">
+              
+              {/* Escolha do competidor (apenas criação) */}
+              {isCreateRank ? (
+                <div>
+                  <label className="font-mono text-xs uppercase text-gray-500 mb-1 block">Competidor (Time/Atleta)</label>
+                  <select
+                    value={inputRankCompId}
+                    onChange={e => setInputRankCompId(e.target.value)}
+                    className="w-full bg-b-dark border-2 border-b-stone focus:border-b-orange p-3 font-body text-white outline-none appearance-none"
+                  >
+                    <option value="">-- Selecione o competidor --</option>
+                    {isTimes ? (
+                      teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)
+                    ) : (
+                      reps.map(r => <option key={r.id} value={r.id}>{r.name} ({r.teams?.name})</option>)
+                    )}
+                  </select>
+                </div>
+              ) : (
+                <div className="bg-b-dark border border-b-stone/20 p-3 font-body text-gray-400">
+                  competidor selecionado
+                </div>
+              )}
+
+              {/* Pontuação */}
+              <label className="block">
+                <span className="font-mono text-xs uppercase text-gray-500 mb-1 block">Pontuação</span>
+                <input
+                  type="number"
+                  value={inputRankScore}
+                  onChange={e => setInputRankScore(e.target.value)}
+                  placeholder="Pontos"
+                  className="w-full bg-b-dark border-2 border-b-stone focus:border-b-orange p-3 font-body text-white outline-none"
+                />
+              </label>
+
+              {error && (
+                <p className="font-mono text-xs text-red-400 bg-red-950/30 border border-red-900 px-3 py-2">
+                  {error}
+                </p>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setRankingModal(null)}
+                  className="flex-1 border-2 border-b-stone text-gray-400 font-display text-lg uppercase py-3 tracking-widest hover:border-white/40 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveRank}
+                  disabled={saving}
+                  className="flex-1 bg-b-orange text-b-dark font-display text-lg uppercase py-3 tracking-widest shadow-brutal hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
+                >
+                  {saving ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+

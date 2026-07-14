@@ -13,6 +13,7 @@ import TestimonialsSection from '@/components/TestimonialsSection'
 import DepoimentoCTA from '@/components/DepoimentoCTA'
 import BaskferiaTeamsSection from '@/components/BaskferiaTeamsSection'
 import BaskferiaRepresentativesSection from '@/components/BaskferiaRepresentativesSection'
+import BaskferiaTournamentsSection from '@/components/BaskferiaTournamentsSection'
 
 export const metadata: Metadata = {
   title: 'Baskferia 2026 | O Maior Evento de Streetball da Zona Oeste de São Paulo',
@@ -108,6 +109,13 @@ export default async function Baskferia() {
     team_name: rep.teams?.name ?? 'Sem time',
     team_logo_url: rep.teams?.logo_url ?? null
   }))
+
+  const { data: activeTours } = await sb
+    .from('tournaments')
+    .select('*')
+    .eq('is_active', true)
+    .order('name', { ascending: true })
+  const tournaments = activeTours ?? []
 
   return (
     <main className="min-h-screen bg-b-dark text-white overflow-x-hidden">
@@ -224,6 +232,9 @@ export default async function Baskferia() {
 
       {/* ── REPRESENTANTES ── */}
       <BaskferiaRepresentativesSection representatives={representatives} />
+
+      {/* ── TORNEIOS E CHAVES ── */}
+      <BaskferiaTournamentsSection initialTournaments={tournaments} />
 
       {/* ── FORMATO ── */}
       <section id="formato" className="py-24 bg-b-gray clip-diagonal-rev">
