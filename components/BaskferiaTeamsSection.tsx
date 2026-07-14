@@ -45,11 +45,11 @@ export default function BaskferiaTeamsSection({ teams }: Props) {
                 className="bg-b-gray border-2 border-b-stone hover:border-b-neon hover:-translate-y-1 transition-all group p-4 flex flex-col items-center justify-between text-center aspect-square shadow-brutal-org hover:shadow-none outline-none"
               >
                 {/* Logo do Time */}
-                <div className="relative w-full aspect-square max-h-[120px] flex items-center justify-center mb-3">
+                <div className="w-full h-24 md:h-28 flex items-center justify-center mb-3 shrink-0">
                   <img
                     src={team.logo_url}
                     alt={`Logo do ${team.name}`}
-                    className="max-w-full max-h-full object-contain filter grayscale group-hover:grayscale-0 transition-all duration-300"
+                    className="max-w-full max-h-full object-contain"
                   />
                 </div>
 
