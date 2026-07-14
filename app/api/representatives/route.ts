@@ -7,7 +7,7 @@ export async function GET() {
 
   const { data, error } = await sb
     .from('representatives')
-    .select('id, name, modality, photo_url, link, teams(name)')
+    .select('id, name, modality, photo_url, link, teams(name, logo_url)')
     .order('name', { ascending: true })
 
   if (error) {
@@ -21,7 +21,8 @@ export async function GET() {
     modality: rep.modality,
     photo_url: rep.photo_url,
     link: rep.link,
-    team_name: rep.teams?.name ?? 'Sem time'
+    team_name: rep.teams?.name ?? 'Sem time',
+    team_logo_url: rep.teams?.logo_url ?? null
   }))
 
   return NextResponse.json({ representatives: formatted })

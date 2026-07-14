@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic'
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
-import InstaFeed from '@/components/InstaFeed'
 import MarqueeStrip from '@/components/MarqueeStrip'
 import HeroSlideshow, { type SiteMedia } from '@/components/HeroSlideshow'
 import { getSupabasePublic } from '@/lib/supabase-server'
@@ -97,7 +96,7 @@ export default async function Baskferia() {
 
   const { data: repsData } = await sb
     .from('representatives')
-    .select('id, name, modality, photo_url, link, teams(name)')
+    .select('id, name, modality, photo_url, link, teams(name, logo_url)')
     .order('name', { ascending: true })
   
   const representatives = (repsData ?? []).map((rep: any) => ({
@@ -106,7 +105,8 @@ export default async function Baskferia() {
     modality: rep.modality,
     photo_url: rep.photo_url,
     link: rep.link,
-    team_name: rep.teams?.name ?? 'Sem time'
+    team_name: rep.teams?.name ?? 'Sem time',
+    team_logo_url: rep.teams?.logo_url ?? null
   }))
 
   return (
@@ -316,19 +316,6 @@ export default async function Baskferia() {
           <p className="font-body text-gray-500 uppercase tracking-widest text-sm">
             Zona Oeste · São Paulo · SP
           </p>
-        </div>
-      </section>
-
-      {/* ── INSTAGRAM BASKFERIA ── */}
-      <section className="py-24 bg-b-gray border-t border-b-stone">
-        <div className="max-w-7xl mx-auto px-6 md:px-20">
-          <div className="flex items-center gap-4 mb-12">
-            <span className="font-mono text-xs text-gray-600 uppercase tracking-widest">// instagram</span>
-            <h2 className="font-display text-4xl text-white uppercase">
-              @baskferia
-            </h2>
-          </div>
-          <InstaFeed profile="baskferia" />
         </div>
       </section>
 

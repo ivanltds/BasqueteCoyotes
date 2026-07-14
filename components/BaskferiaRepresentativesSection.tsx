@@ -7,6 +7,7 @@ export interface Representative {
   photo_url: string
   link: string | null
   team_name: string
+  team_logo_url?: string | null
 }
 
 interface Props {
@@ -19,6 +20,13 @@ const MODALITY_LABELS: Record<string, string> = {
   '2pts': '2 Pontos',
   'x1': 'X1 - Um contra Um',
   '5x5': 'Campeonato 5x5',
+}
+const MODALITY_COLORS: Record<string, string> = {
+  '3pts': 'bg-b-orange/10 border-b-orange text-b-orange',
+  'habilidades': 'bg-b-neon/10 border-b-neon text-b-neon',
+  '2pts': 'bg-cyan-500/10 border-cyan-500 text-cyan-500',
+  'x1': 'bg-rose-500/10 border-rose-500 text-rose-500',
+  '5x5': 'bg-violet-500/10 border-violet-500 text-violet-500',
 }
 
 export default function BaskferiaRepresentativesSection({ representatives }: Props) {
@@ -42,6 +50,7 @@ export default function BaskferiaRepresentativesSection({ representatives }: Pro
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {representatives.map((rep) => {
+              const colorClass = MODALITY_COLORS[rep.modality] || 'bg-b-orange/10 border-b-orange text-b-orange'
               const CardContent = (
                 <div className="flex flex-col justify-between p-4 bg-b-gray border-2 border-b-stone group-hover:border-b-neon transition-all shadow-brutal-org group-hover:shadow-none group-hover:translate-x-1 group-hover:translate-y-1 h-full">
                   {/* Foto do Jogador */}
@@ -51,11 +60,20 @@ export default function BaskferiaRepresentativesSection({ representatives }: Pro
                       alt={rep.name}
                       className="absolute inset-0 w-full h-full object-cover"
                     />
+                    {rep.team_logo_url && (
+                      <div className="absolute top-2 right-2 w-8 h-8 md:w-9 md:h-9 bg-b-dark/80 p-1 border border-b-stone/30 rounded flex items-center justify-center backdrop-blur-sm opacity-60 group-hover:opacity-90 transition-opacity">
+                        <img
+                          src={rep.team_logo_url}
+                          alt="Time"
+                          className="max-w-full max-h-full object-contain"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Informações */}
                   <div className="text-left">
-                    <span className="inline-block bg-b-orange/10 border border-b-orange text-b-orange font-mono text-[9px] uppercase px-2 py-0.5 mb-2 font-bold">
+                    <span className={`inline-block border font-mono text-[9px] uppercase px-2 py-0.5 mb-2 font-bold ${colorClass}`}>
                       {MODALITY_LABELS[rep.modality] || rep.modality}
                     </span>
                     <h3 className="font-display text-lg uppercase text-white group-hover:text-b-neon transition-colors truncate">
