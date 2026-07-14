@@ -178,157 +178,19 @@ export default function PreInscricaoPage() {
           ))}
         </section>
 
-        <form onSubmit={handleSubmit} className="space-y-12 max-w-3xl">
-          {/* Dados Pessoais */}
-          <section className="space-y-6">
-            <h2 className="font-display text-3xl uppercase text-b-orange tracking-widest">01. Seus Dados</h2>
-            
-            <div className="space-y-4">
-              <label className="block">
-                <span className="font-mono text-xs uppercase text-gray-500 mb-2 block">Nome Completo</span>
-                <input 
-                  required
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Seu nome ou vulgo"
-                  className="w-full bg-b-gray border-2 border-b-stone focus:border-b-neon p-4 font-body outline-none transition-colors"
-                />
-              </label>
-
-              <label className="block">
-                <span className="font-mono text-xs uppercase text-gray-500 mb-2 block">E-mail</span>
-                <input 
-                  required
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="seu@email.com"
-                  className="w-full bg-b-gray border-2 border-b-stone focus:border-b-neon p-4 font-body outline-none transition-colors"
-                />
-              </label>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <label className="block">
-                  <span className="font-mono text-xs uppercase text-gray-500 mb-2 block">WhatsApp</span>
-                  <input 
-                    required
-                    type="tel"
-                    value={formData.whatsapp}
-                    onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                    placeholder="(11) 99999-9999"
-                    className="w-full bg-b-gray border-2 border-b-stone focus:border-b-neon p-4 font-body outline-none transition-colors"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="font-mono text-xs uppercase text-gray-500 mb-2 block">Gênero</span>
-                  <select 
-                    required
-                    value={formData.gender}
-                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                    className="w-full bg-b-gray border-2 border-b-stone focus:border-b-neon p-4 font-body outline-none transition-colors appearance-none"
-                  >
-                    <option value="">Selecione...</option>
-                    <option value="masculino">Masculino</option>
-                    <option value="feminino">Feminino</option>
-                    <option value="outro">Prefiro não dizer</option>
-                  </select>
-                </label>
-              </div>
-
-              <label className="block">
-                <span className="font-mono text-xs uppercase text-gray-500 mb-2 block">Faixa Etária</span>
-                <select 
-                  required
-                  value={formData.ageGroup}
-                  onChange={(e) => setFormData({ ...formData, ageGroup: e.target.value })}
-                  className="w-full bg-b-gray border-2 border-b-stone focus:border-b-neon p-4 font-body outline-none transition-colors appearance-none"
-                >
-                  <option value="">Selecione...</option>
-                  <option value="kids">Criança (Até 12 anos)</option>
-                  <option value="teens">Adolescente (13-17 anos)</option>
-                  <option value="adults">Adulto (18+)</option>
-                </select>
-              </label>
-            </div>
-          </section>
-
-          {/* Modalidades */}
-          <section className="space-y-6">
-            <h2 className="font-display text-3xl uppercase text-b-orange tracking-widest">02. Modalidade</h2>
-            <div className="bg-b-orange/10 border-l-4 border-b-orange p-4 mb-4">
-              <p className="font-body text-sm text-b-orange leading-relaxed">
-                <strong>Importante:</strong> O <strong>Desafio de Habilidades</strong> está aberto a todos. Já o <strong>Arremesso de 3 Pontos e o X1</strong> são exclusivos para jogadores inscritos e escalados oficialmente pelas equipes do campeonato 5x5. Escolha apenas <strong>uma</strong> modalidade.
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {MODALITIES.map((mod) => (
-                <button
-                  key={mod.id}
-                  type="button"
-                  onClick={() => selectModality(mod.id)}
-                  className={`flex items-center gap-4 p-4 border-2 transition-all text-left ${
-                    formData.modality === mod.id
-                      ? 'border-b-neon bg-b-neon/10 text-b-neon'
-                      : 'border-b-stone bg-b-gray text-gray-400 hover:border-white/30'
-                  }`}
-                >
-                  <span className="text-2xl">{mod.icon}</span>
-                  <div className="flex flex-col">
-                    <span className="font-display text-xl uppercase leading-none">{mod.label}</span>
-                    {mod.restricted && (
-                      <span className="font-mono text-[10px] uppercase tracking-tighter text-b-orange font-bold">Apenas Representantes 5x5</span>
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          {/* Lógica de Representante */}
-          {isRestrictedSelected && (
-            <section className="animate-in space-y-4 p-6 border-l-4 border-b-neon bg-b-neon/5">
-              <h2 className="font-display text-2xl uppercase text-b-neon">Validação de Equipe</h2>
-              <p className="font-body text-gray-400 text-sm leading-relaxed">
-                Você selecionou uma modalidade restrita. Informe o nome do time oficial que você representará no campeonato 5x5.
-              </p>
-              <label className="block">
-                <span className="font-mono text-xs uppercase text-gray-500 mb-2 block">Nome do Time Oficial</span>
-                <input 
-                  required
-                  type="text"
-                  value={formData.teamName}
-                  onChange={(e) => setFormData({ ...formData, teamName: e.target.value })}
-                  placeholder="Ex: Coyotes, Vila Madah, etc"
-                  className="w-full bg-b-dark border-2 border-b-neon focus:border-b-neon p-4 font-body outline-none transition-colors"
-                />
-              </label>
-            </section>
-          )}
-
-          {/* Botão Submit */}
-          <div className="pt-8">
-            <button
-              disabled={isSubmitting || !formData.modality}
-              type="submit"
-              className={`w-full font-display text-3xl uppercase py-6 tracking-widest transition-all ${
-                isSubmitting || !formData.modality
-                  ? 'bg-b-stone text-gray-600 cursor-not-allowed'
-                  : 'bg-b-neon text-b-dark shadow-brutal-org hover:translate-x-2 hover:translate-y-2 hover:shadow-none'
-              }`}
-            >
-              {isSubmitting ? 'Enviando...' : 'Realizar Pré-Inscrição'}
-            </button>
-            {!formData.modality && (
-              <p className="text-center font-mono text-xs text-b-orange mt-4 uppercase font-bold">
-                Selecione uma modalidade para continuar.
-              </p>
-            )}
+        <div className="border-4 border-dashed border-b-neon p-8 md:p-12 text-center bg-b-gray/30 max-w-3xl shadow-brutal-org">
+          <span className="font-mono text-b-orange text-sm uppercase tracking-widest block mb-4">// chaves fechadas</span>
+          <h2 className="font-display text-4xl md:text-5xl uppercase text-white mb-6">
+            Inscrições <span className="text-stroke">Encerradas!</span>
+          </h2>
+          <p className="font-body text-gray-300 text-lg md:text-xl leading-relaxed mb-8 max-w-2xl mx-auto">
+            Agradecemos o corre de todos! A pré-inscrição para as modalidades individuais da 4ª edição do Baskferia está oficialmente encerrada. 
+            Nossa comissão organizadora está montando as chaves e entrará em contato via WhatsApp com os selecionados.
+          </p>
+          <div className="inline-block bg-b-neon text-b-dark font-display text-xl uppercase px-8 py-4 tracking-wider">
+            Nos vemos na quadra 🐾
           </div>
-
-        </form>
+        </div>
       </div>
     </main>
   )

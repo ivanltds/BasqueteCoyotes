@@ -143,9 +143,9 @@ export default async function Baskferia() {
           <div className="animate-in animate-in-delay-4 flex flex-col sm:flex-row gap-4">
             <Link
               href="/baskferia/pre-inscricao"
-              className="font-display text-xl uppercase bg-b-neon text-b-dark px-8 py-4 tracking-wider shadow-brutal-org hover:shadow-none hover:translate-x-[6px] hover:translate-y-[6px] transition-all duration-150"
+              className="font-display text-xl uppercase bg-b-gray border-2 border-b-neon text-b-neon px-8 py-4 tracking-wider hover:bg-b-neon hover:text-b-dark transition-all duration-150"
             >
-              Quero Jogar
+              Ver Inscritos
             </Link>
             <a
               href="#formato"
