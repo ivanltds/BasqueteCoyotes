@@ -33,7 +33,8 @@ Centralizar a comunicação do time, gerenciar inscrições para eventos (Baskfe
 | ID      | Nome                          | Status       | Fase Atual  |
 |---------|-------------------------------|--------------|-------------|
 | PRD-001 | Pré-Inscrição Baskferia 2026   | concluído    | DEV         |
-| PRD-002 | Seção de Apoiadores & Admin   | em-progresso | DESCOBERTA  |
+| PRD-002 | Seção de Apoiadores & Admin   | concluído    | DEPLOY      |
+| PRD-003 | Times Participantes Baskferia | em-progresso | DESCOBERTA  |
 
 ## Arquivos Registrados
 | Arquivo                                    | Responsável | Descrição                |
@@ -50,9 +51,10 @@ Centralizar a comunicação do time, gerenciar inscrições para eventos (Baskfe
 | docs/contexto-projeto.md                   | Sistema     | Índice central           |
 | docs/prd/baskferia-prospecting-form.md     | Sistema     | PRD do formulário Baskferia |
 | docs/prd/apoiadores-secao.md               | Sistema     | PRD da seção de apoiadores |
+| docs/prd/times-baskferia.md                 | Sistema     | PRD dos times do Baskferia |
 | README.md                                  | Sistema     | Documentação técnica     |
 
 ## Última Atualização
-- Data    : 2026-07-12
+- Data    : 2026-07-14
 - Por     : @maestro
-- Motivo  : Registro dos PRDs de Prospecção e Seção de Apoiadores
+- Motivo  : Registro do PRD de Times do Baskferia

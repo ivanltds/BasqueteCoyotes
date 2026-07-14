@@ -4,6 +4,8 @@ import crypto from 'crypto'
 const ALLOWED: Record<string, string> = {
   member_photo:    'coyotes/members',
   baskferia_photo: 'coyotes/baskferia',
+  team_logo:       'coyotes/teams',
+  team_photo:      'coyotes/teams',
 }
 
 export async function GET(req: NextRequest) {

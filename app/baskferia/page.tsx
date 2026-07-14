@@ -12,6 +12,7 @@ import HeroBaskferiaButton from '@/components/HeroBaskferiaButton'
 import BaskferiaParticipantsSection from '@/components/BaskferiaParticipantsSection'
 import TestimonialsSection from '@/components/TestimonialsSection'
 import DepoimentoCTA from '@/components/DepoimentoCTA'
+import BaskferiaTeamsSection from '@/components/BaskferiaTeamsSection'
 
 export const metadata: Metadata = {
   title: 'Baskferia 2026 | O Maior Evento de Streetball da Zona Oeste de São Paulo',
@@ -86,6 +87,12 @@ export default async function Baskferia() {
     .eq('section', 'baskferia')
     .order('sort_order', { ascending: true })
   const audioTracks = audioData ?? []
+
+  const { data: teamsData } = await sb
+    .from('teams')
+    .select('id, name, location, logo_url, team_photo_url, description_short, description_long')
+    .order('name', { ascending: true })
+  const teams = teamsData ?? []
 
   return (
     <main className="min-h-screen bg-b-dark text-white overflow-x-hidden">
@@ -196,6 +203,9 @@ export default async function Baskferia() {
           sem nenhum tipo de preconceito. Aqui, a quadra é de todos.
         </p>
       </section>
+
+      {/* ── TIMES PARTICIPANTES ── */}
+      <BaskferiaTeamsSection teams={teams} />
 
       {/* ── FORMATO ── */}
       <section id="formato" className="py-24 bg-b-gray clip-diagonal-rev">

@@ -21,7 +21,7 @@ interface Gallery {
   photo_count: number
 }
 
-type Tab = 'galeria' | 'midia' | 'noticias' | 'membros' | 'apoiadores' | 'feedbacks'
+type Tab = 'galeria' | 'midia' | 'noticias' | 'membros' | 'apoiadores' | 'times' | 'feedbacks'
 
 interface SiteMediaItem {
   id: string
@@ -40,6 +40,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'noticias',  label: 'Notícias'  },
   { id: 'membros',   label: 'Membros'   },
   { id: 'apoiadores',label: 'Apoiadores'},
+  { id: 'times',     label: 'Times'     },
   { id: 'feedbacks', label: 'Feedbacks' },
 ]
 
@@ -140,6 +141,7 @@ export default function AdminShell() {
         {tab === 'noticias'  && <TabNoticias />}
         {tab === 'membros'   && <TabMembros />}
         {tab === 'apoiadores'&& <TabApoiadores />}
+        {tab === 'times'     && <TabTimes />}
         {tab === 'feedbacks' && <TabFeedbacks />}
       </div>
     </main>
@@ -2795,6 +2797,406 @@ function TabApoiadores() {
                 <button
                   onClick={handleSave}
                   disabled={saving || uploadingPhoto}
+                  className="flex-1 bg-b-orange text-b-dark font-display text-lg uppercase py-3 tracking-widest shadow-brutal hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all disabled:opacity-50"
+                >
+                  {saving ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── TabTimes ─────────────────────────────────────────────────────────────────
+
+interface TeamAdmin {
+  id: string
+  name: string
+  location: string
+  logo_url: string
+  logo_public_id: string
+  team_photo_url: string
+  team_photo_public_id: string
+  description_short: string
+  description_long: string
+  created_at: string
+}
+
+function TabTimes() {
+  const [teams, setTeams] = useState<TeamAdmin[]>([])
+  const [loading, setLoading] = useState(true)
+  const [modal, setModal] = useState<null | 'create' | { type: 'edit'; team: TeamAdmin }>(null)
+  
+  const [inputName, setInputName] = useState('')
+  const [inputLocation, setInputLocation] = useState('')
+  const [inputDescShort, setInputDescShort] = useState('')
+  const [inputDescLong, setInputDescLong] = useState('')
+
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+
+  const [saving, setSaving] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [error, setError] = useState('')
+
+  const logoInputRef = useRef<HTMLInputElement>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/admin/teams')
+      const d = await res.json()
+      setTeams(d.teams ?? [])
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  function openCreate() {
+    setInputName('')
+    setInputLocation('')
+    setInputDescShort('')
+    setInputDescLong('')
+    setLogoFile(null)
+    setLogoPreview(null)
+    setPhotoFile(null)
+    setPhotoPreview(null)
+    setError('')
+    setModal('create')
+  }
+
+  function openEdit(t: TeamAdmin) {
+    setInputName(t.name)
+    setInputLocation(t.location)
+    setInputDescShort(t.description_short)
+    setInputDescLong(t.description_long)
+    setLogoFile(null)
+    setLogoPreview(t.logo_url)
+    setPhotoFile(null)
+    setPhotoPreview(t.team_photo_url)
+    setError('')
+    setModal({ type: 'edit', team: t })
+  }
+
+  function closeModal() {
+    setModal(null)
+  }
+
+  function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setLogoFile(file)
+    const reader = new FileReader()
+    reader.onload = ev => setLogoPreview(ev.target?.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPhotoFile(file)
+    const reader = new FileReader()
+    reader.onload = ev => setPhotoPreview(ev.target?.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  async function uploadImage(file: File, section: 'team_logo' | 'team_photo'): Promise<{ url: string; public_id: string }> {
+    const sig = await fetch(`/api/sign-public?section=${section}`).then(r => r.json())
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('api_key', sig.api_key)
+    fd.append('timestamp', sig.timestamp)
+    fd.append('signature', sig.signature)
+    fd.append('folder', sig.folder)
+
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloud_name}/image/upload`, { method: 'POST', body: fd })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error?.message ?? `Upload de imagem (${section}) falhou.`)
+    return { url: data.secure_url, public_id: data.public_id }
+  }
+
+  async function handleSave() {
+    if (!inputName.trim() || !inputLocation.trim() || !inputDescShort.trim() || !inputDescLong.trim()) {
+      setError('Todos os campos de texto são obrigatórios.')
+      return
+    }
+
+    setSaving(true)
+    setError('')
+
+    const isEdit = modal !== 'create'
+    const t = isEdit ? (modal as { team: TeamAdmin }).team : null
+
+    // 1. Validar uploads de imagem
+    if (!isEdit && (!logoFile || !photoFile)) {
+      setError('A logo e a foto do time são obrigatórias para novos cadastros.')
+      setSaving(false)
+      return
+    }
+
+    let logo: { url: string; public_id: string } | null = null
+    let photo: { url: string; public_id: string } | null = null
+
+    // Upload Logo
+    if (logoFile) {
+      setUploadingLogo(true)
+      try {
+        logo = await uploadImage(logoFile, 'team_logo')
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Erro no upload da logo.')
+        setUploadingLogo(false)
+        setSaving(false)
+        return
+      }
+      setUploadingLogo(false)
+    }
+
+    // Upload Foto do Time
+    if (photoFile) {
+      setUploadingPhoto(true)
+      try {
+        photo = await uploadImage(photoFile, 'team_photo')
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Erro no upload da foto do time.')
+        setUploadingPhoto(false)
+        setSaving(false)
+        return
+      }
+      setUploadingPhoto(false)
+    }
+
+    // 2. Montar objeto
+    try {
+      const body: Record<string, any> = {
+        name: inputName.trim(),
+        location: inputLocation.trim(),
+        description_short: inputDescShort.trim(),
+        description_long: inputDescLong.trim(),
+      }
+
+      if (logo) {
+        body.logo_url = logo.url
+        body.logo_public_id = logo.public_id
+      }
+      if (photo) {
+        body.team_photo_url = photo.url
+        body.team_photo_public_id = photo.public_id
+      }
+
+      const url = isEdit ? `/api/admin/teams/${t?.id}` : '/api/admin/teams'
+      const method = isEdit ? 'PATCH' : 'POST'
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+
+      if (!res.ok) {
+        const d = await res.json()
+        throw new Error(d.error ?? 'Falha ao salvar time.')
+      }
+
+      closeModal()
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao salvar time.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete(t: TeamAdmin) {
+    if (!confirm(`Excluir equipe "${t.name}"?\n\nIsso apagará permanentemente as fotos do Cloudinary e o cadastro do banco.`)) return
+    try {
+      const res = await fetch(`/api/admin/teams/${t.id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const d = await res.json()
+        throw new Error(d.error ?? 'Erro ao excluir.')
+      }
+      await load()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Erro ao excluir.')
+    }
+  }
+
+  if (loading) return <Spinner />
+
+  const isCreate = modal === 'create'
+  const isEdit = modal !== null && modal !== 'create'
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="font-display text-2xl uppercase text-white">
+          {teams.length} equipe{teams.length !== 1 ? 's' : ''}
+        </h3>
+        <button
+          onClick={openCreate}
+          className="bg-b-orange text-b-dark font-display text-sm uppercase px-5 py-2 tracking-widest shadow-brutal hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
+        >
+          + Novo Time
+        </button>
+      </div>
+
+      {teams.length === 0 ? (
+        <p className="font-body text-gray-600">Nenhuma equipe cadastrada.</p>
+      ) : (
+        <div className="space-y-3">
+          {teams.map(t => (
+            <div key={t.id} className="bg-b-gray border border-b-stone/20 flex items-center gap-4 px-4 py-3">
+              {t.logo_url && (
+                <img
+                  src={t.logo_url}
+                  alt={t.name}
+                  className="w-14 h-14 object-contain bg-b-dark p-1 border border-b-stone/30 shrink-0"
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-body text-white font-bold">{t.name}</p>
+                <p className="font-mono text-[10px] text-b-neon uppercase">📍 {t.location}</p>
+                <p className="font-body text-xs text-gray-500 truncate mt-0.5">{t.description_short}</p>
+              </div>
+              <div className="flex gap-2 shrink-0 ml-4">
+                <button
+                  onClick={() => openEdit(t)}
+                  className="font-mono text-xs uppercase text-b-orange border border-b-stone px-3 py-1.5 hover:border-b-orange transition-colors"
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={() => handleDelete(t)}
+                  className="font-mono text-xs uppercase text-red-400 border border-b-stone px-3 py-1.5 hover:border-red-800 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal */}
+      {(isCreate || isEdit) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 py-6 overflow-y-auto" onClick={closeModal}>
+          <div className="bg-b-gray border-2 border-b-stone w-full max-w-lg shadow-brutal my-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-b-stone">
+              <h2 className="font-display text-2xl uppercase">
+                {isCreate ? 'Nova Equipe' : 'Editar Equipe'}
+              </h2>
+              <button onClick={closeModal} className="font-mono text-gray-500 hover:text-white text-xl">✕</button>
+            </div>
+            <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+              
+              {/* Uploads */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Upload Logo */}
+                <div className="text-center">
+                  <label className="font-mono text-[10px] uppercase text-gray-500 mb-2 block">Logo (Quadrada) *</label>
+                  <div
+                    className="relative aspect-square w-full max-w-[120px] bg-b-dark border-2 border-dashed border-b-stone hover:border-b-orange flex items-center justify-center cursor-pointer overflow-hidden mx-auto"
+                    onClick={() => logoInputRef.current?.click()}
+                  >
+                    {logoPreview ? (
+                      <img src={logoPreview} alt="Logo" className="absolute inset-0 w-full h-full object-contain p-1" />
+                    ) : (
+                      <span className="font-mono text-[9px] text-gray-600 uppercase p-1">Selecionar</span>
+                    )}
+                  </div>
+                  <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
+                </div>
+
+                {/* Upload Foto do Time */}
+                <div className="text-center">
+                  <label className="font-mono text-[10px] uppercase text-gray-500 mb-2 block">Foto (Paisagem) *</label>
+                  <div
+                    className="relative aspect-video w-full max-w-[180px] bg-b-dark border-2 border-dashed border-b-stone hover:border-b-orange flex items-center justify-center cursor-pointer overflow-hidden mx-auto"
+                    style={{ marginTop: '12px' }}
+                    onClick={() => photoInputRef.current?.click()}
+                  >
+                    {photoPreview ? (
+                      <img src={photoPreview} alt="Foto" className="absolute inset-0 w-full h-full object-cover" />
+                    ) : (
+                      <span className="font-mono text-[9px] text-gray-600 uppercase p-1">Selecionar</span>
+                    )}
+                  </div>
+                  <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+                </div>
+              </div>
+
+              {/* Campos */}
+              <label className="block">
+                <span className="font-mono text-xs uppercase text-gray-500 mb-1 block">Nome *</span>
+                <input
+                  type="text"
+                  value={inputName}
+                  onChange={e => setInputName(e.target.value)}
+                  placeholder="Nome do Time"
+                  className="w-full bg-b-dark border-2 border-b-stone focus:border-b-orange p-3 font-body text-white outline-none transition-colors"
+                />
+              </label>
+
+              <label className="block">
+                <span className="font-mono text-xs uppercase text-gray-500 mb-1 block">Origem / Local *</span>
+                <input
+                  type="text"
+                  value={inputLocation}
+                  onChange={e => setInputLocation(e.target.value)}
+                  placeholder="Ex: Zona Oeste, Osasco"
+                  className="w-full bg-b-dark border-2 border-b-stone focus:border-b-orange p-3 font-body text-white outline-none transition-colors"
+                />
+              </label>
+
+              <label className="block">
+                <span className="font-mono text-xs uppercase text-gray-500 mb-1 block">Descrição Curta *</span>
+                <input
+                  type="text"
+                  value={inputDescShort}
+                  onChange={e => setInputDescShort(e.target.value)}
+                  placeholder="Ex: O time tradicional da Cohab de Carapicuíba"
+                  className="w-full bg-b-dark border-2 border-b-stone focus:border-b-orange p-3 font-body text-white outline-none transition-colors"
+                />
+              </label>
+
+              <label className="block">
+                <span className="font-mono text-xs uppercase text-gray-500 mb-1 block">História do Time *</span>
+                <textarea
+                  value={inputDescLong}
+                  onChange={e => setInputDescLong(e.target.value)}
+                  placeholder="Conte a história do time, conquistas, atletas de destaque..."
+                  rows={4}
+                  className="w-full bg-b-dark border-2 border-b-stone focus:border-b-orange p-3 font-body text-white outline-none transition-colors resize-y text-sm leading-relaxed"
+                />
+              </label>
+
+              {error && (
+                <p className="font-mono text-xs text-red-400 bg-red-950/30 border border-red-900 px-3 py-2">
+                  {error}
+                </p>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={closeModal}
+                  className="flex-1 border-2 border-b-stone text-gray-400 font-display text-lg uppercase py-3 tracking-widest hover:border-white/40 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving || uploadingLogo || uploadingPhoto}
                   className="flex-1 bg-b-orange text-b-dark font-display text-lg uppercase py-3 tracking-widest shadow-brutal hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all disabled:opacity-50"
                 >
                   {saving ? 'Salvando...' : 'Salvar'}
