@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabasePublic } from '@/lib/supabase-server'
 
-// GET — Retorna os dados do torneio (seja chaveamento/matches ou classificação/ranking)
+// GET — Retorna os dados do torneio (seja chaveamento/matches, classificação/ranking ou grupos)
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
@@ -19,8 +19,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: tourError?.message ?? 'Torneio não encontrado ou inativo.' }, { status: 404 })
     }
 
-    // 2. Buscar dados dependendo do formato
-    if (tournament.format === 'ranking') {
+    // 2. Buscar rankings se aplicável (ranking ou groups)
+    let formattedRankings: any[] = []
+    let groupA: any[] = []
+    let groupB: any[] = []
+
+    if (tournament.format === 'ranking' || tournament.format === 'groups') {
       const { data: rankings, error: rankError } = await sb
         .from('rankings')
         .select('*, teams(*), representatives(*, teams(*))')
@@ -31,20 +35,30 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         return NextResponse.json({ error: rankError.message }, { status: 500 })
       }
 
-      // Formata o retorno para facilitar o consumo no frontend
-      const formattedRankings = (rankings ?? []).map((r: any) => ({
-        id: r.id,
+      // Formatar ranking geral
+      const allRankings = (rankings ?? []).map((r: any) => ({
+        id: r.representatives?.id || r.teams?.id || r.id, // ID real da entidade
+        ranking_id: r.id, // ID da linha de ranking
         score: r.score,
         name: r.representatives?.name || r.teams?.name || 'Competidor',
         photo_url: r.representatives?.photo_url || r.teams?.logo_url || null,
         team_name: r.representatives?.teams?.name || r.teams?.name || null,
         team_logo_url: r.representatives?.teams?.logo_url || r.teams?.logo_url || null,
+        group_name: r.group_name || null,
       }))
 
-      return NextResponse.json({ format: 'ranking', rankings: formattedRankings })
-    } else {
-      // Formato 'bracket' (chaveamento)
-      const { data: matches, error: matchError } = await sb
+      if (tournament.format === 'groups') {
+        groupA = allRankings.filter((r: any) => r.group_name === 'A')
+        groupB = allRankings.filter((r: any) => r.group_name === 'B')
+      } else {
+        formattedRankings = allRankings
+      }
+    }
+
+    // 3. Buscar matches se aplicável
+    let matches: any[] = []
+    if (tournament.format === 'bracket' || tournament.format === 'groups' || tournament.format === 'ranking') {
+      const { data: matchesData, error: matchError } = await sb
         .from('matches')
         .select('*, team_1:teams!team_id_1(*), team_2:teams!team_id_2(*), rep_1:representatives!representative_id_1(*, teams(*)), rep_2:representatives!representative_id_2(*, teams(*))')
         .eq('tournament_id', id)
@@ -54,8 +68,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         return NextResponse.json({ error: matchError.message }, { status: 500 })
       }
 
-      // Mapear para um formato de objeto uniforme para o frontend consumir
-      const formattedMatches = (matches ?? []).map((m: any) => {
+      matches = (matchesData ?? []).map((m: any) => {
         const c1 = m.rep_1 
           ? {
               id: m.rep_1.id,
@@ -102,9 +115,86 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
           score_2: m.score_2,
         }
       })
-
-      return NextResponse.json({ format: 'bracket', matches: formattedMatches })
     }
+
+    // 4. Lógica de Final Dinâmica para rankings e grupos
+    if (tournament.format === 'ranking') {
+      const finalMatchIndex = matches.findIndex((m) => m.match_number === 7)
+      if (finalMatchIndex !== -1) {
+        const fm = matches[finalMatchIndex]
+        const c1 = fm.competidor_1 || (formattedRankings[0] ? {
+          id: formattedRankings[0].id,
+          name: formattedRankings[0].name,
+          photo_url: formattedRankings[0].photo_url,
+          team_name: formattedRankings[0].team_name,
+          team_logo_url: formattedRankings[0].team_logo_url,
+        } : null)
+
+        const c2 = fm.competidor_2 || (formattedRankings[1] ? {
+          id: formattedRankings[1].id,
+          name: formattedRankings[1].name,
+          photo_url: formattedRankings[1].photo_url,
+          team_name: formattedRankings[1].team_name,
+          team_logo_url: formattedRankings[1].team_logo_url,
+        } : null)
+
+        matches[finalMatchIndex] = {
+          ...fm,
+          competidor_1: c1,
+          competidor_2: c2,
+        }
+      }
+
+      return NextResponse.json({
+        format: 'ranking',
+        rankings: formattedRankings,
+        finalMatch: matches.find((m) => m.match_number === 7) || null
+      })
+    }
+
+    if (tournament.format === 'groups') {
+      const finalMatchIndex = matches.findIndex((m) => m.match_number === 7)
+      if (finalMatchIndex !== -1) {
+        const fm = matches[finalMatchIndex]
+        const c1 = fm.competidor_1 || (groupA[0] ? {
+          id: groupA[0].id,
+          name: groupA[0].name,
+          photo_url: groupA[0].photo_url,
+          team_name: groupA[0].team_name,
+          team_logo_url: groupA[0].team_logo_url,
+        } : null)
+
+        const c2 = fm.competidor_2 || (groupB[0] ? {
+          id: groupB[0].id,
+          name: groupB[0].name,
+          photo_url: groupB[0].photo_url,
+          team_name: groupB[0].team_name,
+          team_logo_url: groupB[0].team_logo_url,
+        } : null)
+
+        matches[finalMatchIndex] = {
+          ...fm,
+          competidor_1: c1,
+          competidor_2: c2,
+        }
+      }
+
+      // Separar os confrontos da fase de grupos (1 a 6)
+      const groupMatches = matches.filter((m) => m.match_number >= 1 && m.match_number <= 6)
+      const finalMatch = matches.find((m) => m.match_number === 7) || null
+
+      return NextResponse.json({
+        format: 'groups',
+        groupA,
+        groupB,
+        groupMatches,
+        finalMatch
+      })
+    }
+
+    // Formato padrão bracket
+    return NextResponse.json({ format: 'bracket', matches })
+
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Erro ao processar dados do torneio.' }, { status: 400 })
   }

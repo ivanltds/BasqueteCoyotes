@@ -11,16 +11,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     const { id } = await params
     const body = await req.json()
-    const { score } = body
+    const { score, group_name } = body
 
-    if (score === undefined || score === null) {
-      return NextResponse.json({ error: 'Pontuação (score) é obrigatória.' }, { status: 400 })
+    const updates: Record<string, any> = {}
+    if (score !== undefined && score !== null) updates.score = Number(score)
+    if (group_name !== undefined) updates.group_name = group_name || null
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'Nenhum campo para atualizar.' }, { status: 400 })
     }
 
     const sb = getSupabaseAdmin()
     const { error } = await sb
       .from('rankings')
-      .update({ score: Number(score) })
+      .update(updates)
       .eq('id', id)
 
     if (error) {

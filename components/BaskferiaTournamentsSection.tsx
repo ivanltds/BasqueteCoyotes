@@ -6,7 +6,7 @@ export interface Tournament {
   id: string
   name: string
   is_active: boolean
-  format: 'bracket' | 'ranking'
+  format: 'bracket' | 'ranking' | 'groups'
 }
 
 interface Competidor {
@@ -34,6 +34,7 @@ interface RankingItem {
   photo_url: string | null
   team_name: string | null
   team_logo_url: string | null
+  group_name?: string | null
 }
 
 interface Props {
@@ -44,9 +45,15 @@ export default function BaskferiaTournamentsSection({ initialTournaments }: Prop
   const [tournaments] = useState<Tournament[]>(initialTournaments)
   const [activeTab, setActiveTab] = useState<string>(initialTournaments[0]?.id || '')
   const [loading, setLoading] = useState(false)
-  const [format, setFormat] = useState<'bracket' | 'ranking'>('bracket')
+  const [format, setFormat] = useState<'bracket' | 'ranking' | 'groups'>('bracket')
   const [matches, setMatches] = useState<Match[]>([])
   const [rankings, setRankings] = useState<RankingItem[]>([])
+  
+  // Fase de grupos
+  const [groupA, setGroupA] = useState<RankingItem[]>([])
+  const [groupB, setGroupB] = useState<RankingItem[]>([])
+  const [finalMatch, setFinalMatch] = useState<Match | null>(null)
+
   const [mobileStage, setMobileStage] = useState<'quarterfinals' | 'semifinals' | 'final'>('quarterfinals')
 
   const loadData = useCallback(async (tourId: string) => {
@@ -58,10 +65,22 @@ export default function BaskferiaTournamentsSection({ initialTournaments }: Prop
       setFormat(d.format)
       if (d.format === 'ranking') {
         setRankings(d.rankings ?? [])
+        setFinalMatch(d.finalMatch ?? null)
         setMatches([])
+        setGroupA([])
+        setGroupB([])
+      } else if (d.format === 'groups') {
+        setGroupA(d.groupA ?? [])
+        setGroupB(d.groupB ?? [])
+        setMatches(d.groupMatches ?? [])
+        setFinalMatch(d.finalMatch ?? null)
+        setRankings([])
       } else {
         setMatches(d.matches ?? [])
         setRankings([])
+        setGroupA([])
+        setGroupB([])
+        setFinalMatch(null)
       }
     } catch (err) {
       console.error(err)
@@ -86,6 +105,15 @@ export default function BaskferiaTournamentsSection({ initialTournaments }: Prop
     }
   })
 
+  // Validação para o confronto decisivo final
+  if (finalMatch && finalMatch.score_1 !== null && finalMatch.score_2 !== null) {
+    if (finalMatch.score_1 > finalMatch.score_2) {
+      if (finalMatch.competidor_2) lostIds.add(finalMatch.competidor_2.id)
+    } else if (finalMatch.score_2 > finalMatch.score_1) {
+      if (finalMatch.competidor_1) lostIds.add(finalMatch.competidor_1.id)
+    }
+  }
+
   // Helper para renderizar o slot do competidor
   function renderCompetidor(comp: Competidor | null, score: number | null, isWinner: boolean) {
     if (!comp) {
@@ -108,7 +136,7 @@ export default function BaskferiaTournamentsSection({ initialTournaments }: Prop
             : 'bg-b-gray border-b-stone/30 text-white'
         }`}
       >
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-3 min-w-0">
           {comp.photo_url ? (
             <div className="relative w-16 h-16 shrink-0">
               <img 
@@ -149,11 +177,8 @@ export default function BaskferiaTournamentsSection({ initialTournaments }: Prop
     )
   }
 
-  // Helper para renderizar a partida inteira
-  function renderMatch(matchNum: number) {
-    const match = matches.find(m => m.match_number === matchNum)
-    if (!match) return null
-
+  // Helper para renderizar o objeto da partida inteira
+  function renderMatchObject(match: Match) {
     const hasScores = match.score_1 !== null && match.score_2 !== null
     const isWinner1 = hasScores && match.score_1! > match.score_2!
     const isWinner2 = hasScores && match.score_2! > match.score_1!
@@ -161,7 +186,7 @@ export default function BaskferiaTournamentsSection({ initialTournaments }: Prop
     return (
       <div className="bg-b-gray/30 border-2 border-b-stone/30 shadow-md">
         <div className="bg-b-dark px-3 py-1 border-b border-b-stone/20 flex justify-between items-center">
-          <span className="font-mono text-[9px] text-gray-500 uppercase tracking-wider">Jogo {matchNum}</span>
+          <span className="font-mono text-[9px] text-gray-500 uppercase tracking-wider">Jogo {match.match_number}</span>
           {match.stage === 'final' && (
             <span className="font-mono text-[9px] text-b-orange font-bold uppercase tracking-widest">🏆 Final</span>
           )}
@@ -169,6 +194,77 @@ export default function BaskferiaTournamentsSection({ initialTournaments }: Prop
         <div className="divide-y divide-b-stone/20">
           {renderCompetidor(match.competidor_1, match.score_1, isWinner1)}
           {renderCompetidor(match.competidor_2, match.score_2, isWinner2)}
+        </div>
+      </div>
+    )
+  }
+
+  // Busca e renderiza por número do jogo na lista matches
+  function renderMatch(matchNum: number) {
+    const match = matches.find(m => m.match_number === matchNum)
+    if (!match) return null
+    return renderMatchObject(match)
+  }
+
+  // Helper para renderizar uma tabela de ranking brutalista
+  function renderRankingTable(items: RankingItem[]) {
+    return (
+      <div className="border-2 border-b-stone/30 bg-b-gray shadow-brutal-org">
+        <div className="grid grid-cols-12 bg-b-dark text-gray-500 font-mono text-xs uppercase px-6 py-3 border-b border-b-stone/30 tracking-wider">
+          <div className="col-span-2">Pos</div>
+          <div className="col-span-7">Competidor</div>
+          <div className="col-span-3 text-right">Pontos</div>
+        </div>
+        <div className="divide-y divide-b-stone/20">
+          {items.map((item, idx) => (
+            <div key={item.id} className="grid grid-cols-12 items-center px-6 py-4 hover:bg-b-neon/[0.02] transition-colors">
+              {/* Posição */}
+              <div className="col-span-2 font-display text-2xl text-white">
+                {idx + 1}º
+              </div>
+              
+              {/* Competidor */}
+              <div className="col-span-7 flex items-center gap-3">
+                {item.photo_url ? (
+                  <div className="relative w-20 h-20 shrink-0">
+                    <img 
+                      src={item.photo_url} 
+                      alt={item.name} 
+                      className="w-full h-full object-cover border border-b-stone/20 rounded" 
+                    />
+                    {item.team_logo_url && (
+                      <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-b-dark/95 p-0.5 rounded border border-b-stone/30 flex items-center justify-center">
+                        <img 
+                          src={item.team_logo_url} 
+                          alt="Time" 
+                          className="max-w-full max-h-full object-contain" 
+                        />
+                      </div>
+                    )}
+                  </div>
+                ) : item.team_logo_url ? (
+                  <img 
+                    src={item.team_logo_url} 
+                    alt={item.name} 
+                    className="w-20 h-20 object-contain shrink-0" 
+                  />
+                ) : null}
+                <div>
+                  <p className="font-display text-lg uppercase text-white leading-tight">{item.name}</p>
+                  {item.photo_url && item.team_name && (
+                    <span className="font-mono text-[10px] text-gray-500 uppercase tracking-widest mt-1 block">
+                      🛡️ {item.team_name}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Pontuação */}
+              <div className="col-span-3 text-right font-display text-3xl text-b-orange">
+                {item.score}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     )
@@ -214,73 +310,110 @@ export default function BaskferiaTournamentsSection({ initialTournaments }: Prop
             </span>
           </div>
         ) : format === 'ranking' ? (
-          /* ── LAYOUT DE RANKING (TABELA POR PONTOS) ── */
-          <div className="max-w-3xl mx-auto">
-            {rankings.length === 0 ? (
-              <div className="border border-dashed border-b-stone p-12 text-center bg-b-gray/20">
-                <p className="font-mono text-gray-600 text-sm uppercase">Nenhum competidor pontuou ainda</p>
-                <p className="font-mono text-[10px] text-gray-700 uppercase mt-2">// pontuações em breve 🐾</p>
-              </div>
-            ) : (
-              <div className="border-2 border-b-stone/30 bg-b-gray shadow-brutal-org">
-                <div className="grid grid-cols-12 bg-b-dark text-gray-500 font-mono text-xs uppercase px-6 py-3 border-b border-b-stone/30 tracking-wider">
-                  <div className="col-span-2">Pos</div>
-                  <div className="col-span-7">Competidor</div>
-                  <div className="col-span-3 text-right">Pontos</div>
+          /* ── LAYOUT DE RANKING (TABELA POR PONTOS + FINAL) ── */
+          <div className="space-y-12">
+            <div className="max-w-3xl mx-auto">
+              {rankings.length === 0 ? (
+                <div className="border border-dashed border-b-stone p-12 text-center bg-b-gray/20">
+                  <p className="font-mono text-gray-600 text-sm uppercase">Nenhum competidor pontuou ainda</p>
+                  <p className="font-mono text-[10px] text-gray-700 uppercase mt-2">// pontuações em breve 🐾</p>
                 </div>
-                <div className="divide-y divide-b-stone/20">
-                  {rankings.map((item, idx) => (
-                    <div key={item.id} className="grid grid-cols-12 items-center px-6 py-4 hover:bg-b-neon/[0.02] transition-colors">
-                      {/* Posição */}
-                      <div className="col-span-2 font-display text-2xl text-white">
-                        {idx + 1}º
-                      </div>
-                      
-                      {/* Competidor */}
-                      <div className="col-span-7 flex items-center gap-3">
-                        {item.photo_url ? (
-                          <div className="relative w-20 h-20 shrink-0">
-                            <img 
-                              src={item.photo_url} 
-                              alt={item.name} 
-                              className="w-full h-full object-cover border border-b-stone/20 rounded" 
-                            />
-                            {item.team_logo_url && (
-                              <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-b-dark/95 p-0.5 rounded border border-b-stone/30 flex items-center justify-center">
-                                <img 
-                                  src={item.team_logo_url} 
-                                  alt="Time" 
-                                  className="max-w-full max-h-full object-contain" 
-                                />
-                              </div>
-                            )}
-                          </div>
-                        ) : item.team_logo_url ? (
-                          <img 
-                            src={item.team_logo_url} 
-                            alt={item.name} 
-                            className="w-20 h-20 object-contain shrink-0" 
-                          />
-                        ) : null}
-                        <div>
-                          <p className="font-display text-lg uppercase text-white leading-tight">{item.name}</p>
-                          {item.photo_url && item.team_name && (
-                            <span className="font-mono text-[10px] text-gray-500 uppercase tracking-widest mt-1 block">
-                              🛡️ {item.team_name}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+              ) : (
+                renderRankingTable(rankings)
+              )}
+            </div>
 
-                      {/* Pontuação */}
-                      <div className="col-span-3 text-right font-display text-3xl text-b-orange">
-                        {item.score}
-                      </div>
+            {/* Grande Final do Ranking */}
+            {finalMatch && (
+              <div className="max-w-md mx-auto space-y-4 pt-6 border-t border-t-stone/20">
+                <h3 className="font-display text-2xl uppercase text-center text-b-orange tracking-widest">🏆 Confronto Decisivo (Final)</h3>
+                {renderMatchObject(finalMatch)}
+              </div>
+            )}
+          </div>
+        ) : format === 'groups' ? (
+          /* ── LAYOUT DE FASE DE GRUPOS (GRUPOS A/B + FINAL) ── */
+          <div className="space-y-12">
+            
+            {/* Tabelas de Classificação dos Grupos */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Grupo A */}
+              <div className="space-y-4">
+                <h3 className="font-display text-xl uppercase text-b-neon tracking-wider">Tabela Grupo A</h3>
+                {groupA.length === 0 ? (
+                  <div className="border border-dashed border-b-stone p-6 text-center bg-b-gray/10 text-xs font-mono text-gray-600">
+                    Nenhum competidor no Grupo A
+                  </div>
+                ) : (
+                  renderRankingTable(groupA)
+                )}
+              </div>
+
+              {/* Grupo B */}
+              <div className="space-y-4">
+                <h3 className="font-display text-xl uppercase text-b-neon tracking-wider">Tabela Grupo B</h3>
+                {groupB.length === 0 ? (
+                  <div className="border border-dashed border-b-stone p-6 text-center bg-b-gray/10 text-xs font-mono text-gray-600">
+                    Nenhum competidor no Grupo B
+                  </div>
+                ) : (
+                  renderRankingTable(groupB)
+                )}
+              </div>
+            </div>
+
+            {/* Jogos da Fase de Grupos (Jogos 1 a 6) */}
+            {matches.length > 0 && (
+              <div className="border-t border-t-stone/20 pt-10 space-y-6">
+                <h3 className="font-display text-2xl uppercase text-white tracking-widest text-center">// Jogos da Fase de Grupos</h3>
+                
+                {/* Desktop Grid */}
+                <div className="hidden md:grid md:grid-cols-2 gap-8">
+                  {/* Grupo A Confrontos */}
+                  <div className="space-y-4">
+                    <h4 className="font-mono text-xs uppercase text-gray-500 tracking-wider">Jogos do Grupo A</h4>
+                    <div className="grid grid-cols-1 gap-4">
+                      {renderMatch(1)}
+                      {renderMatch(2)}
+                      {renderMatch(3)}
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Grupo B Confrontos */}
+                  <div className="space-y-4">
+                    <h4 className="font-mono text-xs uppercase text-gray-500 tracking-wider">Jogos do Grupo B</h4>
+                    <div className="grid grid-cols-1 gap-4">
+                      {renderMatch(4)}
+                      {renderMatch(5)}
+                      {renderMatch(6)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mobile Slider / List */}
+                <div className="md:hidden space-y-4">
+                  {matches
+                    .filter(m => m.match_number >= 1 && m.match_number <= 6)
+                    .map(m => (
+                      <div key={m.id}>
+                        <div className="text-[10px] font-mono text-gray-600 uppercase mb-1">
+                          {m.match_number <= 3 ? 'Grupo A' : 'Grupo B'}
+                        </div>
+                        {renderMatchObject(m)}
+                      </div>
+                    ))}
                 </div>
               </div>
             )}
+
+            {/* Confronto da Grande Final */}
+            {finalMatch && (
+              <div className="max-w-md mx-auto space-y-4 pt-10 border-t border-t-stone/20">
+                <h3 className="font-display text-2xl uppercase text-center text-b-orange tracking-widest">🏆 Grande Final (1º A vs 1º B)</h3>
+                {renderMatchObject(finalMatch)}
+              </div>
+            )}
+
           </div>
         ) : (
           /* ── LAYOUT DE CHAVEAMENTO (BRACKET) ── */

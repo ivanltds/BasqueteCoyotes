@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { tournament_id, team_id, representative_id, score } = body
+    const { tournament_id, team_id, representative_id, score, group_name } = body
 
     if (!tournament_id || (!team_id && !representative_id)) {
       return NextResponse.json({ error: 'Torneio e um competidor (time ou representante) são obrigatórios.' }, { status: 400 })
@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
         team_id: team_id || null,
         representative_id: representative_id || null,
         score: score ? Number(score) : 0,
+        group_name: group_name || null,
       })
       .select('*, teams(*), representatives(*, teams(*))')
       .single()
