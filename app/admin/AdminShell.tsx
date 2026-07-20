@@ -3859,8 +3859,6 @@ function TabTorneios() {
     }
   }
 
-  if (loading) return <Spinner />
-
   const tour = tournaments.find(t => t.id === selectedTourId)
   const isTimes = selectedTourId === '5x5'
   const isCreateRank = rankingModal === 'create'
@@ -3909,6 +3907,8 @@ function TabTorneios() {
   // Separar rankings se for formato grupos
   const rankingsGroupA = rankingsWithStats.filter(r => r.group_name === 'A')
   const rankingsGroupB = rankingsWithStats.filter(r => r.group_name === 'B')
+
+  if (loading) return <Spinner />
 
   return (
     <div className="space-y-6">
