@@ -153,10 +153,72 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     if (tournament.format === 'groups') {
-      const finalMatchIndex = matches.findIndex((m) => m.match_number === 7)
-      if (finalMatchIndex !== -1) {
-        const fm = matches[finalMatchIndex]
-        const c1 = fm.competidor_1 || (groupA[0] ? {
+      // 1. Busca os registros de rankings para saber quem é de qual grupo
+      const { data: rankings, error: rankError } = await sb
+        .from('rankings')
+        .select('*, teams(*), representatives(*, teams(*))')
+        .eq('tournament_id', id)
+
+      if (rankError) {
+        return NextResponse.json({ error: rankError.message }, { status: 500 })
+      }
+
+      // Mapear rankings originais
+      const allRankings = (rankings ?? []).map((r: any) => ({
+        id: r.representatives?.id || r.teams?.id || r.id,
+        ranking_id: r.id,
+        name: r.representatives?.name || r.teams?.name || 'Competidor',
+        photo_url: r.representatives?.photo_url || r.teams?.logo_url || null,
+        team_name: r.representatives?.teams?.name || r.teams?.name || null,
+        team_logo_url: r.representatives?.teams?.logo_url || r.teams?.logo_url || null,
+        group_name: r.group_name || 'A',
+      }))
+
+      // Separar confrontos de fase de grupos (1 a 6) e final (7)
+      const groupMatches = matches.filter((m) => m.match_number >= 1 && m.match_number <= 6)
+      const finalMatchRaw = matches.find((m) => m.match_number === 7) || null
+
+      // Calcular vitórias e pontos de cada participante do ranking na fase de grupos (matches 1 a 6)
+      const participantsStats = allRankings.map((r: any) => {
+        let wins = 0
+        let pointsMade = 0
+
+        groupMatches.forEach((m) => {
+          if (m.score_1 !== null && m.score_2 !== null) {
+            const isComp1 = m.competidor_1?.id === r.id
+            const isComp2 = m.competidor_2?.id === r.id
+
+            if (isComp1) {
+              pointsMade += m.score_1
+              if (m.score_1 > m.score_2) wins += 1
+            } else if (isComp2) {
+              pointsMade += m.score_2
+              if (m.score_2 > m.score_1) wins += 1
+            }
+          }
+        })
+
+        return {
+          ...r,
+          wins,
+          pointsMade,
+          score: wins // Exibe vitórias como score para o frontend
+        }
+      })
+
+      // Ordenar por vitórias desc, depois pontos feitos desc
+      const sortFunction = (a: any, b: any) => {
+        if (b.wins !== a.wins) return b.wins - a.wins
+        return b.pointsMade - a.pointsMade
+      }
+
+      const groupA = participantsStats.filter((p) => p.group_name === 'A').sort(sortFunction)
+      const groupB = participantsStats.filter((p) => p.group_name === 'B').sort(sortFunction)
+
+      // Resolver final (Jogo 7) dinamicamente com os líderes calculados de cada grupo
+      let finalMatch = finalMatchRaw
+      if (finalMatch) {
+        const c1 = finalMatch.competidor_1 || (groupA[0] ? {
           id: groupA[0].id,
           name: groupA[0].name,
           photo_url: groupA[0].photo_url,
@@ -164,7 +226,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
           team_logo_url: groupA[0].team_logo_url,
         } : null)
 
-        const c2 = fm.competidor_2 || (groupB[0] ? {
+        const c2 = finalMatch.competidor_2 || (groupB[0] ? {
           id: groupB[0].id,
           name: groupB[0].name,
           photo_url: groupB[0].photo_url,
@@ -172,16 +234,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
           team_logo_url: groupB[0].team_logo_url,
         } : null)
 
-        matches[finalMatchIndex] = {
-          ...fm,
+        finalMatch = {
+          ...finalMatch,
           competidor_1: c1,
           competidor_2: c2,
         }
       }
-
-      // Separar os confrontos da fase de grupos (1 a 6)
-      const groupMatches = matches.filter((m) => m.match_number >= 1 && m.match_number <= 6)
-      const finalMatch = matches.find((m) => m.match_number === 7) || null
 
       return NextResponse.json({
         format: 'groups',

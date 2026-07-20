@@ -207,13 +207,13 @@ export default function BaskferiaTournamentsSection({ initialTournaments }: Prop
   }
 
   // Helper para renderizar uma tabela de ranking brutalista
-  function renderRankingTable(items: RankingItem[]) {
+  function renderRankingTable(items: RankingItem[], showStats: boolean = false) {
     return (
       <div className="border-2 border-b-stone/30 bg-b-gray shadow-brutal-org">
         <div className="grid grid-cols-12 bg-b-dark text-gray-500 font-mono text-xs uppercase px-6 py-3 border-b border-b-stone/30 tracking-wider">
           <div className="col-span-2">Pos</div>
           <div className="col-span-7">Competidor</div>
-          <div className="col-span-3 text-right">Pontos</div>
+          <div className="col-span-3 text-right">{showStats ? 'V (P)' : 'Pontos'}</div>
         </div>
         <div className="divide-y divide-b-stone/20">
           {items.map((item, idx) => (
@@ -260,8 +260,14 @@ export default function BaskferiaTournamentsSection({ initialTournaments }: Prop
               </div>
 
               {/* Pontuação */}
-              <div className="col-span-3 text-right font-display text-3xl text-b-orange">
-                {item.score}
+              <div className="col-span-3 text-right font-display text-2xl text-b-orange">
+                {showStats ? (
+                  <span>
+                    {(item as any).wins}v <span className="text-gray-500 text-sm">({(item as any).pointsMade}p)</span>
+                  </span>
+                ) : (
+                  item.score
+                )}
               </div>
             </div>
           ))}
@@ -345,7 +351,7 @@ export default function BaskferiaTournamentsSection({ initialTournaments }: Prop
                     Nenhum competidor no Grupo A
                   </div>
                 ) : (
-                  renderRankingTable(groupA)
+                  renderRankingTable(groupA, true)
                 )}
               </div>
 
@@ -357,7 +363,7 @@ export default function BaskferiaTournamentsSection({ initialTournaments }: Prop
                     Nenhum competidor no Grupo B
                   </div>
                 ) : (
-                  renderRankingTable(groupB)
+                  renderRankingTable(groupB, true)
                 )}
               </div>
             </div>

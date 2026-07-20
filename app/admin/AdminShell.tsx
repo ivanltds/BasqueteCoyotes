@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useState, useRef, useMemo } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 
@@ -3865,9 +3865,50 @@ function TabTorneios() {
   const isTimes = selectedTourId === '5x5'
   const isCreateRank = rankingModal === 'create'
 
+  // Calcular vitórias e pontos para o X1 admin se aplicável
+  const rankingsWithStats = useMemo(() => {
+    if (tour?.format !== 'groups') return rankings
+
+    const groupMatches = matches.filter(m => m.match_number >= 1 && m.match_number <= 6)
+
+    const stats = rankings.map(r => {
+      const entityId = r.representative_id || r.team_id || r.id
+      let wins = 0
+      let pointsMade = 0
+
+      groupMatches.forEach(m => {
+        if (m.score_1 !== null && m.score_2 !== null) {
+          const comp1Id = m.representative_id_1 || m.team_id_1
+          const comp2Id = m.representative_id_2 || m.team_id_2
+
+          if (comp1Id === entityId) {
+            pointsMade += m.score_1
+            if (m.score_1 > m.score_2) wins += 1
+          } else if (comp2Id === entityId) {
+            pointsMade += m.score_2
+            if (m.score_2 > m.score_1) wins += 1
+          }
+        }
+      })
+
+      return {
+        ...r,
+        wins,
+        pointsMade,
+        score: wins // Mantemos score como vitórias para a ordenação visual
+      }
+    })
+
+    // Ordena por vitórias desc, depois pontos feitos desc
+    return stats.sort((a, b) => {
+      if (b.wins !== a.wins) return b.wins - a.wins
+      return b.pointsMade - a.pointsMade
+    })
+  }, [rankings, matches, tour?.format])
+
   // Separar rankings se for formato grupos
-  const rankingsGroupA = rankings.filter(r => r.group_name === 'A')
-  const rankingsGroupB = rankings.filter(r => r.group_name === 'B')
+  const rankingsGroupA = rankingsWithStats.filter(r => r.group_name === 'A')
+  const rankingsGroupB = rankingsWithStats.filter(r => r.group_name === 'B')
 
   return (
     <div className="space-y-6">
@@ -4161,7 +4202,9 @@ function TabTorneios() {
                             <span>{isTimes ? r.teams?.name : r.representatives?.name}</span>
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className="font-display text-b-orange">{r.score} pts</span>
+                            <span className="font-display text-b-orange">
+                              {(r as any).wins !== undefined ? `${(r as any).wins}v (${(r as any).pointsMade}p)` : `${r.score} pts`}
+                            </span>
                             <button onClick={() => openEditRank(r)} className="font-mono text-[10px] text-gray-400 hover:text-white uppercase">Edit</button>
                             <button onClick={() => handleDeleteRank(r.id)} className="font-mono text-[10px] text-red-400 hover:text-red-600 uppercase">✕</button>
                           </div>
@@ -4189,14 +4232,16 @@ function TabTorneios() {
                     <p className="font-mono text-xs text-gray-500">// Nenhum competidor no Grupo B</p>
                   ) : (
                     <div className="space-y-2">
-                      {rankingsGroupB.map((r, idx) => (
+                       {rankingsGroupB.map((r, idx) => (
                         <div key={r.id} className="bg-b-gray border border-b-stone/20 flex items-center justify-between px-3 py-2 text-sm">
                           <div className="flex items-center gap-2">
                             <span className="font-display text-sm text-gray-500 w-5">{idx + 1}º</span>
                             <span>{isTimes ? r.teams?.name : r.representatives?.name}</span>
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className="font-display text-b-orange">{r.score} pts</span>
+                            <span className="font-display text-b-orange">
+                              {(r as any).wins !== undefined ? `${(r as any).wins}v (${(r as any).pointsMade}p)` : `${r.score} pts`}
+                            </span>
                             <button onClick={() => openEditRank(r)} className="font-mono text-[10px] text-gray-400 hover:text-white uppercase">Edit</button>
                             <button onClick={() => handleDeleteRank(r.id)} className="font-mono text-[10px] text-red-400 hover:text-red-600 uppercase">✕</button>
                           </div>
